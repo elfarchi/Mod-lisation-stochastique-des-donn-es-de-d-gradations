@@ -15,7 +15,7 @@ ui <- page_navbar(
         selectInput(
           inputId = "model_choice",
           label = "La loi pour les dates de simulation :",
-          choices = c("Constant", "Exponentiel", "Weibull")
+          choices = c("Constant")
         ),
         
         numericInput("pt_nbr", "Nombre points :", 5, min = -100, max = 100),
@@ -59,32 +59,27 @@ server <- function(input, output, session) {
   
   # ----- PAGE 1 -----
   output$plot1 <- renderPlot({
-    model <- input$model_choice
-    
-    if (model == "Normal") {
-      x <- rnorm(1000, mean = input$mean, sd = sqrt(input$variance))
-    } else if (model == "Exponentiel") {
-      x <- rexp(1000, rate = 1/input$mean)
-    } else if (model == "Weibull") {
-      x <- rweibull(1000, shape = input$param1, scale = input$param2)
+    mu = input$moyenne
+    sigma = sqrt(input$variance)
+    L = input$pt_nbr
+    T = 10
+    N=1000
+    t = seq(0,T,length.out = L)
+    Z_k = rnorm(N)
+    B = rep(0,L)
+    for (i in 1:L){
+      u = t[i]
+      s <- 0
+      for(j in 1:N){
+        e_ju = sqrt(8*T)/((2*j+1)*pi)*sin(((2*j+1)*pi*u)/(2*T))
+        s <- s+ Z_k[j]*e_ju
+      }
+      B[i] = s
     }
-    
-    hist(x, main = paste("Distribution:", model), xlab = "", col = "#007bc2", border = "white")
+    X = mu*t + sigma*B
+    plot(t,X,type= 'l')
   })
   
-  # ----- PAGE 2 -----
-  output$plot2 <- renderPlot({
-    x <- rexp(500, rate = input$lambda)
-    hist(x, col = "#007bc2", border = "white",
-         main = "Modèle 2")
-  })
-  
-  # ----- PAGE 3 -----
-  output$plot3 <- renderPlot({
-    x <- rweibull(500, shape = input$shape, scale = input$scale)
-    hist(x, col = "#007bc2", border = "white",
-         main = "Modèle 3")
-  })
 }
 
 # -------------------------------
