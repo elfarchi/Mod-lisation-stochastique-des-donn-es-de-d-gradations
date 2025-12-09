@@ -33,7 +33,10 @@ ui <- page_navbar(
     "Processus Gamma",
     page_sidebar(
       sidebar = sidebar(
-        numericInput("lambda", "Lambda :", 1)
+        numericInput("pt_nbr", "Nombre points :", 100, min = -100, max = 100),
+        numericInput("shape","forme :",3),
+        numericInput("traj_nbr", "Nb trajectoires :", 7),
+        numericInput("rate","taux :",5)
       ),
       plotOutput("plot2")
     )
@@ -91,6 +94,38 @@ server <- function(input, output, session) {
     abline(0, mu, col='red')
   })
   
+<<<<<<< HEAD
+=======
+  # ----- PAGE 2 -----
+  output$plot2 <- renderPlot({
+    traj_nbr = input$traj_nbr
+    nbr_pts = input$pt_nbr
+    forme = input$shape
+    taux = input$rate
+    T = 10
+    N=1000
+    t = seq(0,T,length.out = nbr_pts)
+    
+    simulate = function() {
+      G = rep(0,nbr_pts)
+      x = numeric(nbr_pts)
+      x[1] = 0
+      delta_x = rgamma(nbr_pts,shape = forme*T/nbr_pts,rate = taux)
+      for (i in 2:nbr_pts){
+        x[i] = delta_x[i] + x[i - 1]
+      }
+      return(x)
+    }
+    
+    results = replicate(traj_nbr, simulate())
+    plot(t, results[, 1],type= 'l')
+    for (i in 2:ncol(results)) {
+      lines(t, results[, i], type='l')
+    }
+  })
+  
+   
+>>>>>>> aa8ed864fa5704647d2121de58bd427c761bf658
 }
 
 # -------------------------------
