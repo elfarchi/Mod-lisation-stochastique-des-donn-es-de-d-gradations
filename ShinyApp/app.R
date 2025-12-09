@@ -15,7 +15,7 @@ ui <- page_navbar(
         selectInput(
           inputId = "model_choice",
           label = "La loi pour les dates de simulation :",
-          choices = c("Constant", "Exponentiel", "Weibull")
+          choices = c("Constant")
         ),
         
         numericInput("pt_nbr", "Nombre points :", 100, min = -100, max = 100),
@@ -59,19 +59,6 @@ server <- function(input, output, session) {
   
   # ----- PAGE 1 -----
   output$plot1 <- renderPlot({
-<<<<<<< HEAD
-    model <- input$model_choice
-    
-    if (model == "Normal") {
-      x <- rnorm(1000, mean = input$mean, sd = sqrt(input$variance))
-    } else if (model == "Exponentiel") {
-      x <- rexp(1000, rate = 1/input$mean)
-    } else if (model == "Weibull") {
-      x <- rweibull(1000, shape = input$param1, scale = input$param2)
-    }
-    
-    hist(x, main = paste("Distribution:", model), xlab = "", col = "#007bc2", border = "white")
-=======
     mu = input$moyenne
     sigma = sqrt(input$variance)
     traj_nbr = input$traj_nbr
@@ -102,25 +89,12 @@ server <- function(input, output, session) {
       lines(t, results[, i], type='l')
     }
     abline(0, mu, col='red')
->>>>>>> 69d718f (Fully functional Wiener Simulation)
   })
   
-  # ----- PAGE 2 -----
-  output$plot2 <- renderPlot({
-    x <- rexp(500, rate = input$lambda)
-    hist(x, col = "#007bc2", border = "white",
-         main = "Modèle 2")
-  })
-  
-  # ----- PAGE 3 -----
-  output$plot3 <- renderPlot({
-    x <- rweibull(500, shape = input$shape, scale = input$scale)
-    hist(x, col = "#007bc2", border = "white",
-         main = "Modèle 3")
-  })
 }
 
 # -------------------------------
 # Run the app
 # -------------------------------
 shinyApp(ui, server)
+
