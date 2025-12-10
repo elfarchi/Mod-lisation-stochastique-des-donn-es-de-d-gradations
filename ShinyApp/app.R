@@ -44,13 +44,14 @@ ui <- page_navbar(
   
   # ---- PAGE 3 ----
   nav_panel(
-    "Laser Data",
-    page_sidebar(
-      sidebar = sidebar(
-        numericInput("shape", "Shape :", 2),
-        numericInput("scale", "Scale :", 1)
+    "CSV plot",
+    sidebarLayout(
+      sidebarPanel(
+        fileInput("file", "Upload CSV File", accept = ".csv"),
       ),
+      mainPanel(
       plotOutput("plot3")
+      )
     )
   )
 )
@@ -121,7 +122,27 @@ server <- function(input, output, session) {
       lines(t, results[, i], type='l')
     }
   })
+  # ----- PAGE 3 -----
   
+  data <- reactive({
+    req(input$file)
+    df <- read.csv2(input$file$datapath)
+    df
+  })
+  output$plot3 <- renderPlot({
+    df <- data()
+    x <- df[[1]]
+    y_col <- df[-1]
+    matplot(
+      x, y_col,
+      type = "b",
+      pch = 16,
+      lty = 1,
+      xlab = "X",
+      ylab = "Valeurs",
+      main = "Une courbe par colonne (auto-nettoyée)"
+    )
+  })
   
 }
 
