@@ -28,8 +28,27 @@ for (j in 2:nbr_pts){
   y[j]= delta_nouveau[j]+y[j-1]
 }
 lines(y,type='l',col = "orange2")
+LOG <- log(delta_x)
+
 a <- function(b){
-  return (nbr_pts*log(b)+sum(log(delta_x))+L^2/(b*x[L]))
+  s <- 0
+  
+  for(i in 1:L){   # ✅ correct loop
+    if (!is.na(LOG[i]) && is.finite(LOG[i])) {   # ✅ correct test
+      s <- s + LOG[i]
+    }
+  }
+  
+  return(nbr_pts * log(b) + s - nbr_pts * digamma(b * x[L] / L))
 }
-fct = sapply(t[1:L],a)
+
+ind = seq(1,20,length.out = 200)
+fct = sapply(ind,a)
+res <- uniroot(a, interval = c(0.001, 10))
+r = res$root
+plot(ind,fct,type = 'l')
+abline(h = 0, col = "red")          # ligne y = 0
+abline(v = res$root, col = "blue") # position du zéro
+points(res$root, 0, pch = 19)
+idx <- which(fct[-1] * fct[-length(fct)] < 0)
 

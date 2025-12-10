@@ -50,7 +50,7 @@ ui <- page_navbar(
         fileInput("file", "Upload CSV File", accept = ".csv"),
       ),
       mainPanel(
-      plotOutput("plot3")
+      plotOutput("plot3",height = "800px")
       )
     )
   )
@@ -127,6 +127,7 @@ server <- function(input, output, session) {
     for (i in 2:ncol(results)) {
       lines(t, results[, i], type='l')
     }}
+    abline(0, forme/taux, col='red')
   })
   # ----- PAGE 3 -----
   
