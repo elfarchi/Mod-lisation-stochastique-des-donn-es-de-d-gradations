@@ -51,4 +51,3 @@ abline(h = 0, col = "red")          # ligne y = 0
 abline(v = res$root, col = "blue") # position du zéro
 points(res$root, 0, pch = 19)
 idx <- which(fct[-1] * fct[-length(fct)] < 0)
-
