@@ -44,13 +44,21 @@ ui <- page_navbar(
   
   # ---- PAGE 3 ----
   nav_panel(
-    "Laser Data",
-    page_sidebar(
-      sidebar = sidebar(
-        numericInput("shape", "Shape :", 2),
-        numericInput("scale", "Scale :", 1)
+    "CSV Plot",
+    
+    sidebarLayout(
+      sidebarPanel(
+        fileInput(
+          inputId = "uploaded_file",
+          label = "Upload a CSV file",
+          accept = c(".csv")
+        )
       ),
-      plotOutput("plot3")
+      
+      mainPanel(
+        plotOutput("csv_plot"),
+        verbatimTextOutput("csv_debug")
+      )
     )
   )
 )
@@ -122,7 +130,49 @@ server <- function(input, output, session) {
     }
   })
   
-   
+  # ----- PAGE 3 -----
+  data_csv <- reactive({
+    req(input$uploaded_file)
+    
+    path <- input$uploaded_file$datapath
+    
+    # 1 ere ligne
+    first_line <- readLines(path, n = 1)
+    sep_guess <- if (grepl(";", first_line)) ";" else ","
+    
+    df <- tryCatch({
+      read.csv2(path, sep=";", dec=",")
+      # read.csv(path, sep = sep_guess, dec = ifelse(sep_guess == ";", ",", "."))
+    }, error = function(e) {
+      cat("Error reading CSV:", e$message, "\n")
+      return(NULL)
+    })
+    
+    return(df)
+  })
+  
+  output$csv_plot <- renderPlot({
+    df <- data_csv()
+    req(df)
+    
+    # le temps (colonne 1)
+    t <- df[[1]]
+    
+    # Initialisation du plot avec la premiere courbe
+    plot(
+      t, df[[2]],
+      type = "b",     # line + points
+      pch = 16,       # solid dots
+      main = "Toutes les courbes du CSV",
+      xlab = "Temps",
+      ylab = "Valeurs de degradation"
+    )
+    
+    # les autres courbes
+    for (i in 3:ncol(df)) {
+      lines(t, df[[i]], type = "b", pch = 16)
+    }
+  })
 }
 
 # -------------------------------
