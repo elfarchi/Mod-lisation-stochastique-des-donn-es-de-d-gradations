@@ -119,19 +119,20 @@ server <- function(input, output, session) {
       }
       return(x)
     }
-    
+    if (traj_nbr == 1){
+      plot(t,simulate(),type='l')
+    }else{
     results = replicate(traj_nbr, simulate())
     plot(t, results[, 1],type= 'l')
     for (i in 2:ncol(results)) {
       lines(t, results[, i], type='l')
-    }
+    }}
   })
   # ----- PAGE 3 -----
   
   data <- reactive({
     req(input$file)
     df <- read.csv2(input$file$datapath)
-    df
   })
   output$plot3 <- renderPlot({
     df <- data()
@@ -144,7 +145,7 @@ server <- function(input, output, session) {
       lty = 1,
       xlab = "X",
       ylab = "Valeurs",
-      main = "Une courbe par colonne (auto-nettoyée)"
+      main = "Une courbe par colonne"
     )
   })
   
