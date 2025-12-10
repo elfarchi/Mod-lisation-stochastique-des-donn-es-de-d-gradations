@@ -86,13 +86,17 @@ server <- function(input, output, session) {
       X = mu*t + sigma*B
       return(X)
     }
-    
-    results = replicate(traj_nbr, simulate())
-    plot(t, results[, 1],type= 'l')
-    for (i in 2:ncol(results)) {
-      lines(t, results[, i], type='l')
+    if (traj_nbr == 1){
+      plot(t,simulate(),type='l')
+      abline(0, mu, col='red')
+    }else{
+      results = replicate(traj_nbr, simulate())
+      plot(t, results[, 1],type= 'l')
+      for (i in 2:ncol(results)) {
+        lines(t, results[, i], type='l')
+      }
+      abline(0, mu, col='red')
     }
-    abline(0, mu, col='red')
   })
   
   # ----- PAGE 2 -----
