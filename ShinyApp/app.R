@@ -99,6 +99,8 @@ server <- function(input, output, session) {
     }
   })
   
+<<<<<<< HEAD
+=======
   # ----- PAGE 2 -----
   output$plot2 <- renderPlot({
     traj_nbr = input$traj_nbr
@@ -148,9 +150,15 @@ server <- function(input, output, session) {
     )
   })
   
+<<<<<<< HEAD
+=======
+   
+>>>>>>> aa8ed864fa5704647d2121de58bd427c761bf658
+>>>>>>> 4f58d176f4a764a9eb249ac718b26625b9a8a5b0
 }
 
 # -------------------------------
 # Run the app
 # -------------------------------
 shinyApp(ui, server)
+
