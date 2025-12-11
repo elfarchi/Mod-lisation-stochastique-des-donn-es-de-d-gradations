@@ -56,7 +56,7 @@ ui <- page_navbar(
         fileInput("file", "Upload CSV File", accept = ".csv"),
       ),
       mainPanel(
-      plotOutput("plot3",height = "800px")
+        plotOutput("plot3",height = "800px")
       )
     )
   )
@@ -168,6 +168,7 @@ server <- function(input, output, session) {
     req(input$file)
     df <- read.csv2(input$file$datapath)
   })
+  
   output$plot3 <- renderPlot({
     df <- data()
     x <- df[[1]]
@@ -182,7 +183,8 @@ server <- function(input, output, session) {
       main = "Une courbe par colonne"
     )
   })
-  
+
+ 
 }
 
 # -------------------------------
