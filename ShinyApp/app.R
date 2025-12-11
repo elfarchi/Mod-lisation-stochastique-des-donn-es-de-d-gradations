@@ -15,7 +15,7 @@ ui <- page_navbar(
         selectInput(
           inputId = "model_choice",
           label = "La loi pour les dates de simulation :",
-          choices = c("Constant")
+          choices = c("Constant", "Aleatoire")
         ),
         
         numericInput("pt_nbr", "Nombre points :", 100, min = -100, max = 100),
@@ -33,6 +33,12 @@ ui <- page_navbar(
     "Processus Gamma",
     page_sidebar(
       sidebar = sidebar(
+        selectInput(
+          inputId = "model_choice",
+          label = "La loi pour les dates de simulation :",
+          choices = c("Constant", "Aleatoire")
+        ),
+        
         numericInput("pt_nbr", "Nombre points :", 100, min = -100, max = 100),
         numericInput("shape","forme :",3),
         numericInput("traj_nbr", "Nb trajectoires :", 7),
@@ -48,9 +54,10 @@ ui <- page_navbar(
     sidebarLayout(
       sidebarPanel(
         fileInput("file", "Upload CSV File", accept = ".csv"),
+        checkboxInput("log_it","Log the dataset")
       ),
       mainPanel(
-      plotOutput("plot3")
+        plotOutput("plot3",height = "800px")
       )
     )
   )
@@ -63,14 +70,24 @@ server <- function(input, output, session) {
   
   # ----- PAGE 1 -----
   output$plot1 <- renderPlot({
+    model <- input$model_choice
     mu = input$moyenne
     sigma = sqrt(input$variance)
     traj_nbr = input$traj_nbr
     L = input$pt_nbr
     T = 10
     N=1000
-    t = seq(0,T,length.out = L)
-    
+    if (model == "Constant") {
+      t = seq(0,T,length.out = L)
+      
+    } else if (model == "Aleatoire") {
+      delta_t = runif(L - 1)
+      t = numeric(L)
+      t[1] = 0
+      for (i in 2:L) {
+        t[i] = t[i - 1] + delta_t[i - 1] 
+      }
+    }
     simulate = function() {
       Z_k = rnorm(N)
       B = rep(0,L)
@@ -86,6 +103,7 @@ server <- function(input, output, session) {
       X = mu*t + sigma*B
       return(X)
     }
+    
     if (traj_nbr == 1){
       plot(t,simulate(),type='l')
       abline(0, mu, col='red')
@@ -98,47 +116,66 @@ server <- function(input, output, session) {
       abline(0, mu, col='red')
     }
   })
-  
-<<<<<<< HEAD
-=======
+
   # ----- PAGE 2 -----
   output$plot2 <- renderPlot({
+    model <- input$model_choice
     traj_nbr = input$traj_nbr
     nbr_pts = input$pt_nbr
     forme = input$shape
     taux = input$rate
     T = 10
     N=1000
-    t = seq(0,T,length.out = nbr_pts)
+    if (model == "Constant") {
+      t = seq(0,T,length.out = nbr_pts)
+      
+    } else if (model == "Aleatoire") {
+      delta_t = runif(nbr_pts - 1)
+      t = numeric(nbr_pts)
+      t[1] = 0
+      for (i in 2:nbr_pts) {
+        t[i] = t[i - 1] + delta_t[i - 1] 
+      }
+    }
     
     simulate = function() {
       G = rep(0,nbr_pts)
       x = numeric(nbr_pts)
       x[1] = 0
-      delta_x = rgamma(nbr_pts,shape = forme*T/nbr_pts,rate = taux)
+      delta_x = numeric(nbr_pts)
+      delta_x[1] = rgamma(1, shape = forme * t[1], rate = taux)
+      for (i in 2:nbr_pts) {
+        delta_x[i] = rgamma(1, shape = forme * (t[i] - t[i - 1]), rate = taux)
+      }
       for (i in 2:nbr_pts){
         x[i] = delta_x[i] + x[i - 1]
       }
       return(x)
     }
-    
-    results = replicate(traj_nbr, simulate())
-    plot(t, results[, 1],type= 'l')
-    for (i in 2:ncol(results)) {
-      lines(t, results[, i], type='l')
+    if (traj_nbr == 1){
+      plot(t,simulate(),type='l')
+    } else {
+      results = replicate(traj_nbr, simulate())
+      plot(t, results[, 1],type= 'l')
+      for (i in 2:ncol(results)) {
+        lines(t, results[, i], type='l')
+      }
     }
+    abline(0, forme/taux, col='red')
   })
   # ----- PAGE 3 -----
   
   data <- reactive({
     req(input$file)
     df <- read.csv2(input$file$datapath)
-    df
   })
+  
   output$plot3 <- renderPlot({
+    log_it = input$log_it
     df <- data()
-    x <- df[[1]]
-    y_col <- df[-1]
+    if(log_it){
+    x <- log(df[[1]])
+    y_col <- log(df[-1])
     matplot(
       x, y_col,
       type = "b",
@@ -146,15 +183,23 @@ server <- function(input, output, session) {
       lty = 1,
       xlab = "X",
       ylab = "Valeurs",
-      main = "Une courbe par colonne (auto-nettoyée)"
-    )
+      main = "Une courbe par colonne"
+    )}
+    else{
+      x <- df[[1]]
+      y_col <- df[-1]
+      matplot(
+        x, y_col,
+        type = "b",
+        pch = 16,
+        lty = 1,
+        xlab = "X",
+        ylab = "Valeurs",
+        main = "Une courbe par colonne"
+      )
+    }
   })
-  
-<<<<<<< HEAD
-=======
-   
->>>>>>> aa8ed864fa5704647d2121de58bd427c761bf658
->>>>>>> 4f58d176f4a764a9eb249ac718b26625b9a8a5b0
+
 }
 
 # -------------------------------
