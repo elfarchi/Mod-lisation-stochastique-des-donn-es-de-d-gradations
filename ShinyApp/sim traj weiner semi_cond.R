@@ -1,4 +1,3 @@
-
 df <- read.csv2("/home/elfarchi/equipe_1/Semicond.csv")
 t = df[[1]]
 x <- log(df[[1]])
