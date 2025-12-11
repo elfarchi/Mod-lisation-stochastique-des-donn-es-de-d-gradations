@@ -1,5 +1,5 @@
 
-df <- read.csv2("/home/elfarchi/equipe_1/Semicond.csv")
+df <- read.csv2("../Semicond.csv")
 x <- log(df[[1]])
 n = length(x)
 for(i in 1:length(df[-1])){

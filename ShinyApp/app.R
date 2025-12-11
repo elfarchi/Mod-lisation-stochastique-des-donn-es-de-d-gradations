@@ -54,10 +54,14 @@ ui <- page_navbar(
     sidebarLayout(
       sidebarPanel(
         fileInput("file", "Upload CSV File", accept = ".csv"),
-        checkboxInput("log_it","Log the dataset")
+        checkboxInput("log_it", "Log the dataset"),
+        checkboxInput("show_stats", "Afficher statistiques"),
+        checkboxInput("show_extra", "Afficher courbes supplémentaires"),
+        hr(),
+        verbatimTextOutput("csv_stats")   # <--- stats appear here
       ),
       mainPanel(
-        plotOutput("plot3",height = "800px")
+        plotOutput("plot3", height = "800px")
       )
     )
   )
@@ -69,6 +73,22 @@ ui <- page_navbar(
 server <- function(input, output, session) {
   
   # ----- PAGE 1 -----
+  simulateWiener = function(N, L, mu, sigma, t) {
+    Z_k = rnorm(N)
+    B = rep(0,L)
+    for (i in 1:L){
+      u = t[i]
+      s <- 0
+      for(j in 1:N){
+        e_ju = sqrt(8*T)/((2*j+1)*pi)*sin(((2*j+1)*pi*u)/(2*T))
+        s <- s+ Z_k[j]*e_ju
+      }
+      B[i] = s
+    }
+    X = mu*t + sigma*B
+    return(X)
+  }
+  
   output$plot1 <- renderPlot({
     model <- input$model_choice
     mu = input$moyenne
@@ -88,27 +108,12 @@ server <- function(input, output, session) {
         t[i] = t[i - 1] + delta_t[i - 1] 
       }
     }
-    simulate = function() {
-      Z_k = rnorm(N)
-      B = rep(0,L)
-      for (i in 1:L){
-        u = t[i]
-        s <- 0
-        for(j in 1:N){
-          e_ju = sqrt(8*T)/((2*j+1)*pi)*sin(((2*j+1)*pi*u)/(2*T))
-          s <- s+ Z_k[j]*e_ju
-        }
-        B[i] = s
-      }
-      X = mu*t + sigma*B
-      return(X)
-    }
     
     if (traj_nbr == 1){
-      plot(t,simulate(),type='l')
+      plot(t,simulateWiener(N, L, mu, sigma, t),type='l')
       abline(0, mu, col='red')
     }else{
-      results = replicate(traj_nbr, simulate())
+      results = replicate(traj_nbr, simulateWiener(N, L, mu, sigma, t))
       plot(t, results[, 1],type= 'l')
       for (i in 2:ncol(results)) {
         lines(t, results[, i], type='l')
@@ -118,6 +123,22 @@ server <- function(input, output, session) {
   })
   
   # ----- PAGE 2 -----
+  
+  simulateGamma = function(nbr_pts, forme, taux, t) {
+    G = rep(0,nbr_pts)
+    x = numeric(nbr_pts)
+    x[1] = 0
+    delta_x = numeric(nbr_pts)
+    delta_x[1] = rgamma(1, shape = forme * t[1], rate = taux)
+    for (i in 2:nbr_pts) {
+      delta_x[i] = rgamma(1, shape = forme * (t[i] - t[i - 1]), rate = taux)
+    }
+    for (i in 2:nbr_pts){
+      x[i] = delta_x[i] + x[i - 1]
+    }
+    return(x)
+  }
+  
   output$plot2 <- renderPlot({
     model <- input$model_choice
     traj_nbr = input$traj_nbr
@@ -138,24 +159,10 @@ server <- function(input, output, session) {
       }
     }
     
-    simulate = function() {
-      G = rep(0,nbr_pts)
-      x = numeric(nbr_pts)
-      x[1] = 0
-      delta_x = numeric(nbr_pts)
-      delta_x[1] = rgamma(1, shape = forme * t[1], rate = taux)
-      for (i in 2:nbr_pts) {
-        delta_x[i] = rgamma(1, shape = forme * (t[i] - t[i - 1]), rate = taux)
-      }
-      for (i in 2:nbr_pts){
-        x[i] = delta_x[i] + x[i - 1]
-      }
-      return(x)
-    }
     if (traj_nbr == 1){
-      plot(t,simulate(),type='l')
+      plot(t,simulateGamma(nbr_pts, forme, taux, t),type='l')
     } else {
-      results = replicate(traj_nbr, simulate())
+      results = replicate(traj_nbr, simulateGamma(nbr_pts, forme, taux, t))
       plot(t, results[, 1],type= 'l')
       for (i in 2:ncol(results)) {
         lines(t, results[, i], type='l')
@@ -164,43 +171,59 @@ server <- function(input, output, session) {
     abline(0, forme/taux, col='red')
   })
   # ----- PAGE 3 -----
-  
   data <- reactive({
     req(input$file)
     df <- read.csv2(input$file$datapath)
   })
   
-  output$plot3 <- renderPlot({
-    log_it = input$log_it
+  params <- reactive({
     df <- data()
-    if(log_it){
-    x <- log(df[[1]])
-    y_col <- log(df[-1])
-    matplot(
-      x, y_col,
-      type = "b",
-      pch = 16,
-      lty = 1,
-      xlab = "X",
-      ylab = "Valeurs",
-      main = "Une courbe par colonne"
-    )}
-    else{
-      x <- df[[1]]
-      y_col <- df[-1]
-      matplot(
-        x, y_col,
-        type = "b",
-        pch = 16,
-        lty = 1,
-        xlab = "X",
-        ylab = "Valeurs",
-        main = "Une courbe par colonne"
-      )
+    t = df[[1]]
+    a = numeric(ncol(df) - 1)
+    b = numeric(ncol(df) - 1)
+    for (i in 1:length(a)) {
+      X = df[[i + 1]]
+      delta_X = numeric(nrow(df))
+      delta_X[1] = X[1]
+      for (j in 2:length(delta_X)) {
+        delta_X[j] = X[j] - X[j - 1]
+      }
+      m = mean(delta_X)
+      v = var(delta_X)
+      a[i] = m/v
+      b[i] = t[length(t)]/v
+    }
+    return (list(t = t, a = a, b = b))
+  })
+  
+  output$csv_stats <- renderPrint({
+    req(input$show_stats)
+    p <- params()
+    print(p$a)
+    print(p$b)
+  })
+  
+  output$plot3 <- renderPlot({
+    df <- data()
+    req(df)
+    
+    log_it <- input$log_it
+    x <- if (log_it) log(df[[1]]) else df[[1]]
+    y_col <- if (log_it) log(df[-1]) else df[-1]
+    
+    matplot(x, y_col, type = "b", pch = 16, lty = 1, xlab = "X", ylab = "Valeurs", main = "Courbes depuis CSV")
+    
+    if (input$show_extra) {
+      p <- params()
+      t = p$t
+      a = p$a
+      b = p$b
+      for (i in 1:length(a)){
+        lines(t, simulateGamma(length(t), a[i], b[i], t), col = "orange2", lwd = 2, lty = 2)
+      }
     }
   })
 
- 
 }
 
 # -------------------------------

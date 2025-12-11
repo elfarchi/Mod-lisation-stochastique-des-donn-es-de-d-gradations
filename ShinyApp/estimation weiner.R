@@ -3,6 +3,7 @@ sigma = 7
 L = 1000
 T = 10
 N=1000
+
 t = seq(0,T,length.out = L)
 B = rep(0,L)
 simulate = function(mu,sigma) {
@@ -24,16 +25,16 @@ simulate = function(mu,sigma) {
   return(res)
 }
 X_B = simulate(mu,sigma)
+
+
 X= X_B[1,]
 B=X_B[2,]
-#results = replicate(traj_nbr, simulate(mu,sigma)[1])
+
+
 delta_res =X[2:L]-X[1:L-1]
 plot(t, X,type= 'l')
 mu_estimé = X[L]/(L*0.01)
 sigma_est = sqrt(sum((delta_res-mu*0.01)^2)/(L*0.01))
 B_nouvelle = simulate(mu,sigma)[2,]
-#sigma_est_2 = sqrt(sum((delta_res-mean(delta_res))^2)/(L*0.01))
 X_est = mu_estimé*t+sigma_est*B_nouvelle
-#X_est_2 = mu_estimé*t+sigma_est_2*B
 lines(t,X_est,type='l',col = 'darkgreen')
-#lines(t,X_est,type='l',col = 'red')
