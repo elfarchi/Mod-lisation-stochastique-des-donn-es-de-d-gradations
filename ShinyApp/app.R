@@ -176,7 +176,7 @@ server <- function(input, output, session) {
     df <- read.csv2(input$file$datapath)
   })
   
-  params <- reactive({
+  paramsGammaMoments <- reactive({
     df <- data()
     t = df[[1]]
     a = numeric(ncol(df) - 1)
@@ -190,15 +190,16 @@ server <- function(input, output, session) {
       }
       m = mean(delta_X)
       v = var(delta_X)
-      a[i] = m/v
-      b[i] = t[length(t)]/v
+      a[i] = (m^2)/(v * (t[i +1] - t[i]))
+      b[i] = m/v
     }
     return (list(t = t, a = a, b = b))
   })
   
   output$csv_stats <- renderPrint({
     req(input$show_stats)
-    p <- params()
+    p <- paramsGammaMoments()
+    print("parametres de Gamma par la methode de moments")
     print(p$a)
     print(p$b)
   })
@@ -214,12 +215,12 @@ server <- function(input, output, session) {
     matplot(x, y_col, type = "b", pch = 16, lty = 1, xlab = "X", ylab = "Valeurs", main = "Courbes depuis CSV")
     
     if (input$show_extra) {
-      p <- params()
+      p <- paramsGammaMoments()
       t = p$t
       a = p$a
       b = p$b
       for (i in 1:length(a)){
-        lines(t, simulateGamma(length(t), a[i], b[i], t), col = "orange2", lwd = 2, lty = 2)
+        lines(t, simulateGamma(length(t), a[i], b[i], t), col = "orange2", type="l")
       }
     }
   })
