@@ -54,6 +54,7 @@ ui <- page_navbar(
     sidebarLayout(
       sidebarPanel(
         fileInput("file", "Upload CSV File", accept = ".csv"),
+        checkboxInput("log_it","Log the dataset")
       ),
       mainPanel(
         plotOutput("plot3",height = "800px")
@@ -170,9 +171,11 @@ server <- function(input, output, session) {
   })
   
   output$plot3 <- renderPlot({
+    log_it = input$log_it
     df <- data()
-    x <- df[[1]]
-    y_col <- df[-1]
+    if(log_it){
+    x <- log(df[[1]])
+    y_col <- log(df[-1])
     matplot(
       x, y_col,
       type = "b",
@@ -181,7 +184,20 @@ server <- function(input, output, session) {
       xlab = "X",
       ylab = "Valeurs",
       main = "Une courbe par colonne"
-    )
+    )}
+    else{
+      x <- df[[1]]
+      y_col <- df[-1]
+      matplot(
+        x, y_col,
+        type = "b",
+        pch = 16,
+        lty = 1,
+        xlab = "X",
+        ylab = "Valeurs",
+        main = "Une courbe par colonne"
+      )
+    }
   })
 
  
