@@ -13,7 +13,7 @@ for(i in 1:length(df[-1])){
     xlab = "X",
     ylab = "Valeurs",
     main = "Une courbe par colonne")
-  y = c(y[1],y_col[2:p]-y_col[1:(p-1)])
+  y = c(y_col[1],y_col[2:p]-y_col[1:(p-1)])
   delta_t = x[2:n]-x[1:(n-1)]
   mu =  y_col[p]/x[n]
   sigma = sqrt(1/p*sum(((y-mu*delta_t)^2)/delta_t))
