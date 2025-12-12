@@ -56,7 +56,9 @@ ui <- page_navbar(
         fileInput("file", "Upload CSV File", accept = ".csv"),
         checkboxInput("log_it", "Log the dataset"),
         checkboxInput("show_stats", "Afficher statistiques"),
-        checkboxInput("show_extra", "Afficher courbes supplémentaires"),
+        checkboxInput("show_Gamma_Simu", "Afficher les simulations de Gamma"),
+        checkboxInput("takeoff_data", "Enlever les courbes reelles"),
+        numericInput("seuil", "Seuil horizontal :", value = 10),
         hr(),
         verbatimTextOutput("csv_stats")   # <--- stats appear here
       ),
@@ -204,26 +206,65 @@ server <- function(input, output, session) {
     print(p$b)
   })
   
+
+  
   output$plot3 <- renderPlot({
+    show_data <- !isTRUE(input$takeoff_data)
+    show_sim  <- isTRUE(input$show_Gamma_Simu)
+    
+    req(show_data || show_sim)
+    
     df <- data()
     req(df)
     
-    log_it <- input$log_it
+    log_it <- isTRUE(input$log_it)
     x <- if (log_it) log(df[[1]]) else df[[1]]
     y_col <- if (log_it) log(df[-1]) else df[-1]
     
-    matplot(x, y_col, type = "b", pch = 16, lty = 1, xlab = "X", ylab = "Valeurs", main = "Courbes depuis CSV")
+    t_max <- max(x, na.rm = TRUE)
+    xlim <- c(0, 2 * t_max)
+    t_ext <- seq(from = min(x), to   = xlim[2], length.out = 200)
     
-    if (input$show_extra) {
-      p <- paramsGammaMoments()
-      t = p$t
-      a = p$a
-      b = p$b
-      for (i in 1:length(a)){
-        lines(t, simulateGamma(length(t), a[i], b[i], t), col = "orange2", type="l")
-      }
+    seuil <- input$seuil
+    
+    ylim <- c(0, seuil * 1.2)  
+    
+    plot(NA, xlim = xlim, ylim = ylim, xlab = "X", ylab = "Valeurs", main = "Courbes depuis CSV", type = "n")
+    
+    if (show_data) {
+      matlines(x, y_col, type = "b", pch = 16, lty = 1)
     }
+    
+    if (show_sim) {
+      p <- paramsGammaMoments()
+      t <- p$t
+      a <- p$a
+      b <- p$b
+      
+      t_plot <- if (log_it) log(t) else t
+      
+      sim_mat <- sapply(seq_along(a), function(i) {
+        simulateGamma(length(t_ext), a[i], b[i], t_ext)
+      })
+      
+      ylim_sim <- range(sim_mat, na.rm = TRUE)
+      
+      plot(
+        NA, xlim = xlim, ylim = ylim,
+        xlab = "X", ylab = "Valeurs",
+        main = "Courbes depuis CSV",
+        type = "n"
+      )
+      
+      if (show_data) {
+        matlines(x, y_col, type = "b", pch = 16, lty = 1)
+      }
+      
+      matlines(t_ext, sim_mat, lty = 2, lwd = 2)
+    }
+    abline(h = seuil, col = "red", lwd = 2)
   })
+  
 
 }
 
