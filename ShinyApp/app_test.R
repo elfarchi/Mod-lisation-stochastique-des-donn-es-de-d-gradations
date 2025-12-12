@@ -374,7 +374,7 @@ server <- function(input, output, session) {
     }
     abline(v = t_maintenance[2:(length(t_maintenance) - 1)],
            col = "red", lwd = 1)
-    X_maintenancefixe[L] =X[L]-petit_delta*(nbr_maint-1)
+    X_maintenancefixe[L] =X[L]-petit_delta*(length(idx_maint)-1)
     lines(t,X_maintenancefixe, type ='l', col="green")
   }
   drift_change <- function(X,X_drift,mu,alpha,beta,nbr_maint,T,L){
