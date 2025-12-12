@@ -15,7 +15,7 @@ for(i in 1:length(df[-1])){
   sigma = sqrt(1/n*sum(((y-mu*delta_t)^2)/delta_t))
   sigma_vect[i] = sigma
 }
-sim <- rnorm(n, mean = mu_v*delta_t, sd = mean_sigma*sqrt(delta_t))
+sim <- rnorm(n, mean = mu_vect*delta_t, sd = mean_sigma*sqrt(delta_t))
 y_sim =cumsum(sim)
   matplot(
     x, Y,

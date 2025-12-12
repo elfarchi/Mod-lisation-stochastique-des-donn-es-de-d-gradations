@@ -25,6 +25,7 @@ ui <- page_navbar(
         numericInput("moyenne", "Moyenne :", 10, min = 0, max = 100),
         numericInput("variance", "Variance :", 10),
         numericInput("traj_nbr", "Nb trajectoires :", 7),
+        numericInput("T","Durée",10),
         numericInput("seuil", "Seuil :", 1)
       ),
       
@@ -47,7 +48,7 @@ ui <- page_navbar(
         
         numericInput("pt_nbr", "Nombre points :", 100, min = -100, max = 100),
         numericInput("shape","forme :",3),
-        numericInput("traj_nbr", "Nb trajectoires :", 7),
+        numericInput("traj_nbr", "Nb trajectoires :", 1),
         numericInput("rate","taux :",5)
       ),
       
@@ -74,8 +75,48 @@ ui <- page_navbar(
         plotOutput("plot3", height = "800px")
       )
     )
+  ),
+  # # ---- PAGE 4: Processus Weiner avec maintenance imparfaite ----
+  nav_panel(
+    "Processus Weiner avec maintenance imparfaite",
+    sidebarLayout(
+      sidebarPanel(
+        selectInput(
+          inputId = "model_maint",
+          label = "Modèle de maintenance imparfaite",
+          choices = c("ARD fixe","ARD1","Changement de drift","kijima")
+        ),
+        numericInput("pt_nbr", "nombre de points ",1000),
+        numericInput("mu", "paramètre de tendance :", 1),
+        numericInput("sigma2", "paramètre de variabilité :", 5),
+        numericInput("T","intervalle de temps :" ,50), 
+        conditionalPanel(
+          condition = "input.model_maint == 'ARD fixe'",
+          numericInput("nbr_maint","Nombre de maintenances :", 4),
+          numericInput("delta","constante de réduction :", 0)
+          
+        ),
+        conditionalPanel(
+          condition = "input.model_maint == 'ARD1'",
+          numericInput("nbr_maint","Nombre de maintenances", 4),
+          numericInput("rho","taux de restauration", 0)
+  
+        ),
+        conditionalPanel(
+          condition = "input.model_maint == 'Changement de drift'",
+          numericInput("nbr_maint","Nombre de maintenances", 4),
+          numericInput("alpha","facteur de multiplication", 1),
+          numericInput("beta","facteur de modification alpha/beta", 1)
+        ),
+        conditionalPanel(
+          condition = "input.model_maint == 'kijima'",
+      )),
+      mainPanel(
+        plotOutput("plot4", height = "800px"),
+        )
+      )
+    )
   )
-)
 
 # -------------------------------
 # SERVEUR
@@ -87,10 +128,10 @@ server <- function(input, output, session) {
   # ============================================================
   
   # Fonction qui simule une trajectoire de Wiener (décomposition KL)
-  simulateWiener = function(N, L, mu, sigma, t) {
+  simulateWiener = function(N, L, mu, sigma, T) {
     Z_k = rnorm(N)          # Coefficients aléatoires
+    t = seq(0,T,length.out = L)
     B = rep(0,L)            # Stockage du bruit brownien approché
-    
     for (i in 1:L){
       u = t[i]
       s <- 0
@@ -119,7 +160,7 @@ server <- function(input, output, session) {
     
     # Construction de l'échelle temporelle
     if (model == "Constant") {
-      t = seq(0,T,length.out = L)
+      t = seq(0,input$T,length.out = L)
     } else {
       delta_t = runif(L - 1)
       t = numeric(L)
@@ -129,12 +170,12 @@ server <- function(input, output, session) {
     
     # Cas une seule trajectoire
     if (traj_nbr == 1){
-      plot(t,simulateWiener(N, L, mu, sigma, t),type='l')
+      plot(seq(0,input$T,length.out = L),simulateWiener(N, L, mu, sigma, input$T),type='l')
       abline(0, mu, col='red')
     } else {
       # Plusieurs trajectoires
-      results = replicate(traj_nbr, simulateWiener(N, L, mu, sigma, t))
-      plot(t, results[, 1],type= 'l')
+      results = replicate(traj_nbr, simulateWiener(N, L, mu, sigma, input$T))
+      plot(seq(0,input$T,length.out = L), results[, 1],type= 'l')
       for (i in 2:ncol(results)) lines(t, results[, i])
       abline(0, mu, col='red')
     }
@@ -292,6 +333,84 @@ server <- function(input, output, session) {
     # Ligne horizontale seuil
     abline(h = seuil, col = "red", lwd = 2)
   })
+  
+  # ============================================================
+  # PAGE 4 : Processus Weiner avec maintenance imparfaite
+  # ============================================================  
+  ARD_1 <- function(X,X_maintenance,rho,nbr_maint,T,L){
+    nbr_maint = nbr_maint+1
+    t <- seq(0, T, length.out = length(X))
+    t_maintenance = rep(0,nbr_maint)
+    for( i in 1:nbr_maint){
+      t_maintenance[i]= t[i*L/nbr_maint]
+    }
+    X_maintenance[(L/nbr_maint*0):(L/nbr_maint*(0+1))] = X[(L/nbr_maint*0): (L/nbr_maint*(0+1))]
+    for(i in 1:(nbr_maint-1)){
+      X_maintenance[(L/nbr_maint*i)] = (1-rho)*X[(L/nbr_maint*i)]
+      delta = X[(L/nbr_maint*i)]-X_maintenance[(L/nbr_maint*i)]
+      X_maintenance[((L/nbr_maint*i)+1):((L/nbr_maint*(i+1))-1)] = X[((L/nbr_maint*i)+1):((L/nbr_maint*(i+1))-1)]-delta
+      abline(v = t_maintenance[i],col = 'red')
+    }
+    X_maintenance[L] =X[L]-delta
+    lines(t,X_maintenance, type ='l', col="blue")
+  }
+  ARD_fixe <- function(X,X_maintenancefixe,petit_delta,nbr_maint,T,L){
+    nbr_maint = nbr_maint+1
+    t <- seq(0, T, length.out = length(X))
+    t_maintenance = rep(0,nbr_maint)
+    for( i in 1:nbr_maint){
+      t_maintenance[i]= t[i*L/nbr_maint]
+    }
+    X_maintenancefixe[(L/nbr_maint*0):(L/nbr_maint*(0+1))] = X[(L/nbr_maint*0): (L/nbr_maint*(0+1))]
+    for(i in 1:(nbr_maint-1)){
+      X_maintenancefixe[((L/nbr_maint*i)):((L/nbr_maint*(i+1))-1)] = X[((L/nbr_maint*i)):((L/nbr_maint*(i+1))-1)]-petit_delta*i
+      abline(v = t_maintenance[i],col = 'red')
+    }
+    X_maintenancefixe[L] =X[L]-petit_delta*(nbr_maint-1)
+    lines(t,X_maintenancefixe, type ='l', col="green")
+  }
+  drift_change <- function(X,X_drift,alpha,beta,nbr_maint,T,L){
+    nbr_maint = nbr_maint+1
+    t <- seq(0, T, length.out = length(X))
+    t_maintenance = rep(0,nbr_maint)
+    for( i in 1:nbr_maint){
+      t_maintenance[i]= t[i*L/nbr_maint]
+    }
+    X_drift[(L/nbr_maint*0):(L/nbr_maint*(0+1))] = X[(L/nbr_maint*0): (L/nbr_maint*(0+1))]
+    X = X - mu*t
+    for(i in 1:(nbr_maint-1)){
+      alpha = alpha/beta
+      X = X+mu*alpha*t
+      X_drift[((L/nbr_maint*i)):((L/nbr_maint*(i+1))-1)] = X[((L/nbr_maint*i)):((L/nbr_maint*(i+1))-1)]
+      X= X-mu*alpha*t
+      abline(v = t_maintenance[i],col = 'red')
+    }
+    X_drift[L]=(X+mu*alpha*t)[L]
+    lines(t,X_drift,type='l',col = "cyan")
+  }
+  output$plot4 <- renderPlot({
+    L <- input$pt_nbr
+    N = 1000
+    sigma = sqrt(input$sigma2)
+    X <- simulateWiener(N, L, input$mu, sigma, input$T)
+    t <- seq(0, input$T, length.out = length(X))
+    plot(t, X, type = 'l')
+    X_res <- rep(0, L)
+    if (input$model_maint == "ARD fixe") {
+        ARD_fixe(X, X_res, input$delta, input$nbr_maint, input$T,L)
+      
+    } else if (input$model_maint == "ARD1") {
+       ARD_1(X, X_res, input$rho, input$nbr_maint,input$T,L)
+      
+    } else if (input$model_maint == "Changement de drift") {
+        drift_change(X, X_res, input$alpha, input$beta, input$nbr_maint,input$T,L)
+    } else if (input$model_maint == "kijima"){
+        lines(h = 2,col ='orange')
+    }
+  })
+  
+  
+  
 }
 
 # -------------------------------

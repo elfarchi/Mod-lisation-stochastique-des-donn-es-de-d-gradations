@@ -13,9 +13,9 @@ z = matrix(0,nrow=length(df[-1]), ncol = length(df[-1][,1]))
 for (j in 1:length(df[-1])){
   z[j,]= c(y_mat[j,1],y[j,])
 }  
-delta_t = c(t[1],t[2:n]-t[1:(n-1)])
+delta_t = c(x[1],x[2:n]-x[1:(n-1)])
 d_tmat = matrix(delta_t, nrow = m, ncol = length(delta_t), byrow = TRUE)
-mu = sum(z)/(t[n]*m)
+mu = sum(z)/(x[n]*m)
 sigma = sqrt(1/(n*m)*sum(((z-mu*d_tmat)^2)/d_tmat))
 sim <- rnorm(n, mean = mu*delta_t, sd = sigma*sqrt(delta_t))
 y_sim <- cumsum(sim) 
