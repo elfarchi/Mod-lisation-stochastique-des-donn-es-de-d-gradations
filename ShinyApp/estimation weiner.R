@@ -1,11 +1,12 @@
-mu = 15
-sigma = 7
+df <- read.csv2("/home/elfarchi/equipe_1/Semicond.csv")
+mu = mu_vect[1]
+sigma = sigma_vect[1]
 L = 1000
-T = 10
-N=1000
-
-t = seq(0,T,length.out = L)
-B = rep(0,L)
+T = 20
+N=500
+h = 30
+x <- log(df[[1]])
+t = seq(0,x[35],length.out = L)
 simulate = function(mu,sigma) {
   B = rep(0,L)
   Z_k = rnorm(N)
@@ -26,15 +27,50 @@ simulate = function(mu,sigma) {
 }
 X_B = simulate(mu,sigma)
 
-
+n = 100
 X= X_B[1,]
 B=X_B[2,]
-
 
 delta_res =X[2:L]-X[1:L-1]
 plot(t, X,type= 'l')
 mu_estimé = X[L]/(L*0.01)
 sigma_est = sqrt(sum((delta_res-mu*0.01)^2)/(L*0.01))
 B_nouvelle = simulate(mu,sigma)[2,]
+X_rep = replicate(n,simulate(mu,sigma))
 X_est = mu_estimé*t+sigma_est*B_nouvelle
-lines(t,X_est,type='l',col = 'darkgreen')
+plot(t,X_est, type = 'l', col = "darkgreen")
+for(i in 1:n){
+  lines(t,X_rep[1,,i],type='l')
+}
+liste_t = numeric(n)
+for(k in 1:n){
+  liste_t[k]=t[which(X_rep[1,,k]>=h)[1]]
+}
+library(statmod)
+
+liste_t <- liste_t[!is.na(liste_t)]
+
+dT_wiener <- function(t, h, mu, sigma) {
+  out <- h / sqrt(2*pi*sigma^2 * t^3) * exp(-(h - mu*t)^2 / (2*sigma^2*t))
+  out
+}
+dT = dT_wiener(t,h,mu_estimé,sigma_est)
+
+hist(liste_t, prob = TRUE, breaks = 20,
+     main = "Histogramme de liste_t + densité IG théorique",
+     xlab = "Temps de première traversée")
+
+xx <- seq(min(liste_t), max(liste_t), length.out = 200)
+
+lines(xx, dinvgauss(xx, mean = h/mu, shape = h^2/(sigma^2)),
+      col = "red", lwd = 2)
+# densité du temps de première traversée (Inverse Gaussienne)
+dT_wiener <- function(t, h, mu, sigma) {
+  # t peut être un vecteur
+  out <- h / sqrt(2*pi*sigma^2 * t^3) * exp(-(h - mu*t)^2 / (2*sigma^2*t))
+  out[t <= 0] <- 0
+  out
+}
+dT = dT_wiener(t,h,mu,sigma)
+
+  

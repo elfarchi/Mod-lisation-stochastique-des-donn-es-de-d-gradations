@@ -13,9 +13,9 @@ z = matrix(0,nrow=length(df[-1]), ncol = length(df[-1][,1]))
 for (j in 1:length(df[-1])){
   z[j,]= c(y_mat[j,1],y[j,])
 }  
-delta_t = c(x[1],x[2:n]-x[1:(n-1)])
+delta_t = c(t[1],t[2:n]-t[1:(n-1)])
 d_tmat = matrix(delta_t, nrow = m, ncol = length(delta_t), byrow = TRUE)
-mu = sum(z)/(x[n]*m)
+mu = sum(z)/(t[n]*m)
 sigma = sqrt(1/(n*m)*sum(((z-mu*d_tmat)^2)/d_tmat))
 sim <- rnorm(n, mean = mu*delta_t, sd = sigma*sqrt(delta_t))
 y_sim <- cumsum(sim) 
@@ -30,30 +30,38 @@ matplot(
 )
 lines(x,y_sim,col ='gold',type = 'b')
 # 2nd part of simulation
-t = seq(1,10,length.out = 100)
-mul= 6
-h = 2.3
+mu = 15
+sigma = 17
+#t = seq(1,10,length.out = 100)
+mul= 60
+h = 10
 p = 35*mul
-t = seq(0,40000*mul,length.out = p)
+t = seq(x[1],x[35]*mul,length.out = p)
 fu <- function(){
-  sim_1 = rnorm(length(delta_t),mean = mu*delta_t, sd = sigma*sqrt(delta_t))
+  sim_1 = rnorm(p,mean = mu*delta_t, sd = sigma*sqrt(delta_t))
   y_sim_1 = cumsum(sim_1)
   return(y_sim_1)
   
 }
 simi = fu()
-plot(delta,simi,type= 'b')
+plot(t,simi,type= 'b')
 sim_rep = replicate(100,fu())
 for(i in 1:100){
-  lines(x,sim_rep[,i],type='b')
+  lines(t,sim_rep[,i],type='b')
 }
 liste_t = numeric(100)
 for(k in 1:100){
-  liste_t[k]=x[which(sim_rep[,k]>=h)[1]]
+  liste_t[k]=t[which(sim_rep[,k]>=h)[1]]
 }
 library(statmod)
 
 liste_t <- liste_t[!is.na(liste_t)]   # enlève NA
+
+dT_wiener <- function(t, h, mu, sigma) {
+  out <- h / sqrt(2*pi*sigma^2 * t^3) * exp(-(h - mu*t)^2 / (2*sigma^2*t))
+  out
+}
+dT = dT_wiener(t,h,mu,sigma)
 
 ### --- Histogramme du temps de défaillance ---
 hist(liste_t, prob = TRUE, breaks = 20,

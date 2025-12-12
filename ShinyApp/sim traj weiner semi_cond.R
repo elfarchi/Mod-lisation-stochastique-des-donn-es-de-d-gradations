@@ -9,15 +9,13 @@ Y = df[-1]
 for(i in 1:length(df[-1])){
   y_col <- log(df[-1][,i])
   y = c(y_col[1],y_col[2:n]-y_col[1:(n-1)])
-  delta_t = c(t[1],t[2:n]-t[1:(n-1)])
-  mu =  y_col[n]/t[n]
+  delta_t = c(x[1],x[2:n]-x[1:(n-1)])
+  mu =  y_col[n]/x[n]
   mu_vect[i] = mu
   sigma = sqrt(1/n*sum(((y-mu*delta_t)^2)/delta_t))
   sigma_vect[i] = sigma
 }
-mean_mu = mean(mu_vect)
-mean_sigma = mean(sigma_vect)
-sim <- rnorm(n, mean = mean_mu*delta_t, sd = mean_sigma*sqrt(delta_t))
+sim <- rnorm(n, mean = mu_v*delta_t, sd = mean_sigma*sqrt(delta_t))
 y_sim =cumsum(sim)
   matplot(
     x, Y,
@@ -26,6 +24,5 @@ y_sim =cumsum(sim)
     lty = 1,
     xlab = "X",
     ylab = "Valeurs",
-    main = "Une courbe par colonne",
-    ylim= c(min(y_col,y_sim),max(y_col,y_sim)))
+    main = "Une courbe par colonne",)
   lines(x,y_sim,col ='hotpink',type = 'b')
