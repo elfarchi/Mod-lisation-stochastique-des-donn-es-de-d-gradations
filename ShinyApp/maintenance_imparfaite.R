@@ -1,7 +1,7 @@
 df <- read.csv2("/home/elfarchi/equipe_1/Semicond.csv")
 mu = mu_vect[1]
 sigma = sigma_vect[1]
-L = 1500
+L = 1000
 it = L/4
 T = 20
 N=1300
@@ -73,6 +73,9 @@ for(i in 1:3){
 }
 X_drift[L]=(X+mu*alpha*t)[L]
 lines(t,X_drift,type='l',col = "cyan")
-
+t_test = rep(0,6)
+for( i in 1:6){
+  t_test[i]= i*L/6
+}
 
 

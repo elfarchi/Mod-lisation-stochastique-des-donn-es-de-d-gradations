@@ -84,7 +84,7 @@ ui <- page_navbar(
         selectInput(
           inputId = "model_maint",
           label = "Modèle de maintenance imparfaite",
-          choices = c("ARD fixe","ARD1","Changement de drift","kijima")
+          choices = c("Pas de maintenance","ARD fixe","ARD1","Changement de drift","kijima")
         ),
         numericInput("pt_nbr", "nombre de points ",1000),
         numericInput("mu", "paramètre de tendance :", 1),
@@ -110,7 +110,9 @@ ui <- page_navbar(
         ),
         conditionalPanel(
           condition = "input.model_maint == 'kijima'",
-      )),
+        ),
+        conditionalPanel(condition = "input.model_maint == 'Pas de maintenance")
+      ),
       mainPanel(
         plotOutput("plot4", height = "800px"),
         )
@@ -339,16 +341,19 @@ server <- function(input, output, session) {
   # ============================================================  
   ARD_1 <- function(X,X_maintenance,rho,nbr_maint,T,L){
     nbr_maint = nbr_maint+1
-    t <- seq(0, T, length.out = length(X))
+    idx_maint <- floor(seq(1, L, length.out = nbr_maint + 1))
+    t <- seq(0, T, length.out = L)
     t_maintenance = rep(0,nbr_maint)
-    for( i in 1:nbr_maint){
-      t_maintenance[i]= t[i*L/nbr_maint]
+    
+    for( i in 1:nbr_maint+1){
+      t_maintenance[i]= t[idx_maint[i]]
     }
-    X_maintenance[(L/nbr_maint*0):(L/nbr_maint*(0+1))] = X[(L/nbr_maint*0): (L/nbr_maint*(0+1))]
-    for(i in 1:(nbr_maint-1)){
-      X_maintenance[(L/nbr_maint*i)] = (1-rho)*X[(L/nbr_maint*i)]
-      delta = X[(L/nbr_maint*i)]-X_maintenance[(L/nbr_maint*i)]
-      X_maintenance[((L/nbr_maint*i)+1):((L/nbr_maint*(i+1))-1)] = X[((L/nbr_maint*i)+1):((L/nbr_maint*(i+1))-1)]-delta
+    X_maintenance[0:(idx_maint[2]-1)] = X[0: (idx_maint[2]-1)]
+    delta <- 0
+    for(i in 2:(length(idx_maint)-1)){
+      X_maintenance[idx_maint[i]] = (1-rho)*X[idx_maint[i]]
+      delta = X[idx_maint[i]]-X_maintenance[idx_maint[i]]
+      X_maintenance[(idx_maint[i]+1):(idx_maint[i+1]-1)] = X[(idx_maint[i]+1):(idx_maint[i+1]-1)]-delta
       abline(v = t_maintenance[i],col = 'red')
     }
     X_maintenance[L] =X[L]-delta
@@ -356,14 +361,15 @@ server <- function(input, output, session) {
   }
   ARD_fixe <- function(X,X_maintenancefixe,petit_delta,nbr_maint,T,L){
     nbr_maint = nbr_maint+1
-    t <- seq(0, T, length.out = length(X))
-    t_maintenance = rep(0,nbr_maint)
-    for( i in 1:nbr_maint){
-      t_maintenance[i]= t[i*L/nbr_maint]
+    idx_maint <- floor(seq(1, L, length.out = nbr_maint + 1))
+    t <- seq(0, T, length.out = L)
+    t_maintenance = rep(0,nbr_maint+1)
+    for( i in 1:nbr_maint+1){
+      t_maintenance[i]= t[idx_maint[i]]
     }
-    X_maintenancefixe[(L/nbr_maint*0):(L/nbr_maint*(0+1))] = X[(L/nbr_maint*0): (L/nbr_maint*(0+1))]
-    for(i in 1:(nbr_maint-1)){
-      X_maintenancefixe[((L/nbr_maint*i)):((L/nbr_maint*(i+1))-1)] = X[((L/nbr_maint*i)):((L/nbr_maint*(i+1))-1)]-petit_delta*i
+    X_maintenancefixe[0:(idx_maint[2]-1)] = X[0: (idx_maint[2]-1)]
+    for(i in 2:(length(idx_maint)-1)){
+      X_maintenancefixe[idx_maint[i]:(idx_maint[i+1]-1)] = X[(idx_maint[i]):(idx_maint[i+1]-1)]-petit_delta*i
       abline(v = t_maintenance[i],col = 'red')
     }
     X_maintenancefixe[L] =X[L]-petit_delta*(nbr_maint-1)
@@ -371,17 +377,18 @@ server <- function(input, output, session) {
   }
   drift_change <- function(X,X_drift,alpha,beta,nbr_maint,T,L){
     nbr_maint = nbr_maint+1
-    t <- seq(0, T, length.out = length(X))
-    t_maintenance = rep(0,nbr_maint)
-    for( i in 1:nbr_maint){
-      t_maintenance[i]= t[i*L/nbr_maint]
+    idx_maint <- floor(seq(1, L, length.out = nbr_maint + 1))
+    t <- seq(0, T, length.out = L)
+    t_maintenance = rep(0,nbr_maint+1)
+    for( i in 1:nbr_maint+1){
+      t_maintenance[i]= t[idx_maint[i]]
     }
-    X_drift[(L/nbr_maint*0):(L/nbr_maint*(0+1))] = X[(L/nbr_maint*0): (L/nbr_maint*(0+1))]
+    X_drift[0:(idx_maint[2]-1)] = X[0: (idx_maint[2]-1)]
     X = X - mu*t
-    for(i in 1:(nbr_maint-1)){
+    for(i in 2:(length(idx_maint)-1)){
       alpha = alpha/beta
       X = X+mu*alpha*t
-      X_drift[((L/nbr_maint*i)):((L/nbr_maint*(i+1))-1)] = X[((L/nbr_maint*i)):((L/nbr_maint*(i+1))-1)]
+      X_drift[idx_maint[i]:(idx_maint[i+1]-1)] = X[(idx_maint[i]):(idx_maint[i+1]-1)]
       X= X-mu*alpha*t
       abline(v = t_maintenance[i],col = 'red')
     }
@@ -393,7 +400,7 @@ server <- function(input, output, session) {
     N = 1000
     sigma = sqrt(input$sigma2)
     X <- simulateWiener(N, L, input$mu, sigma, input$T)
-    t <- seq(0, input$T, length.out = length(X))
+    t <- seq(0, input$T, length.out = L)
     plot(t, X, type = 'l')
     X_res <- rep(0, L)
     if (input$model_maint == "ARD fixe") {
