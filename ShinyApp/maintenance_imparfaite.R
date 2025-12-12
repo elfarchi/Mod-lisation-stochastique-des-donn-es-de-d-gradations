@@ -4,7 +4,7 @@ sigma = sigma_vect[1]
 L = 1500
 it = L/4
 T = 20
-N=1000
+N=1300
 h = 30
 x <- log(df[[1]])
 t = seq(0,x[35],length.out = L)
@@ -33,7 +33,7 @@ X= X_B[1,]
 X_maintenance = rep(0,L)
 rho = 0.5
 X_maintenance[(L/4*0):(L/4*(0+1))] = X[(L/4*0): (L/4*(0+1))]
-
+t_maintenance = c(t[L/4],t[L/2],t[3*L/4],t[L])
 delta_res =X[2:L]-X[1:L-1]
 plot(t, X,type= 'l')
 s <- 0
