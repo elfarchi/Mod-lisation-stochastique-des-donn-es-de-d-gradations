@@ -64,7 +64,7 @@ ui <- page_navbar(
         checkboxInput("log_it", "Log the dataset"),
         checkboxInput("show_stats", "Afficher statistiques"),
         checkboxInput("show_Gamma_Moments", "Afficher les simulations de Gamma (Moments)"),
-        checkboxInput("show_Gamma_Vrai", "Afficher les simulations de Gamma (Max.Vrai.)"),
+        checkboxInput("show_Wiener_Vrai", "Afficher les simulations de Wiener (Max.Vrai.)"),
         checkboxInput("takeoff_data", "Enlever les courbes reelles"),
         numericInput("seuil", "Seuil horizontal :", value = 20),
         hr(),
@@ -235,6 +235,30 @@ server <- function(input, output, session) {
     return (list(t = t, a = a, b = b))
   })
   
+  paramsWienerMaxVrai <- reactive({
+    df <- data()
+    t = df[[1]]
+    n = length(t)
+    delta_t = numeric(n)
+    delta_t[1] = t[1]
+    for (i in 2:n) {
+      delta_t[i] = t[i] - t[i-1]
+    }
+    mu = numeric(ncol(df) - 1)
+    sigma = numeric(ncol(df) - 1)
+    for (i in 1:length(mu)) {
+      X = log(df[[i + 1]])
+      delta_X = numeric(length(X))
+      delta_X[1] = X[1]
+      for (j in 2:n) {
+        delta_X[j] = X[j] - X[j-1]
+      }
+      mu[i] = X[n]/t[n]
+      sigma[i] = sqrt(sum((delta_X - mu[i] * delta_t)^2)/n)
+    }
+    return (list(t = t, mu = mu, sigma = sigma))
+  })
+  
   # Affichage des stats
   output$csv_stats <- renderPrint({
     req(input$show_stats)
@@ -248,9 +272,9 @@ server <- function(input, output, session) {
   output$plot3 <- renderPlot({
     show_data <- !isTRUE(input$takeoff_data)
     show_gamma_Moments  <- isTRUE(input$show_Gamma_Moments)
-    show_gamma_Vrai <- isTRUE(input$show_Gamma_Vrai)
+    show_wiener_Vrai <- isTRUE(input$show_Wiener_Vrai)
     
-    req(show_data || show_gamma_Moments || show_gamma_Vrai)
+    req(show_data || show_gamma_Moments || show_wiener_Vrai)
     
     df <- data()
     req(df)
@@ -263,10 +287,11 @@ server <- function(input, output, session) {
     # Extension du domaine temporel pour prévoir dans le futur
     t_max <- max(x, na.rm = TRUE)
     xlim <- c(0, 3 * t_max)
-    t_ext <- seq(from = min(x), to = xlim[2], length.out = 200)
+    t_ext <- seq(from = min(x), to = xlim[2], length.out = 10)
     
     seuil <- input$seuil
     ylim <- c(0, seuil * 1.2)
+    
     
     # Plot vide
     plot(NA, xlim = xlim, ylim = ylim,
@@ -291,28 +316,16 @@ server <- function(input, output, session) {
       matlines(t_ext, sim_mat, lty = 2, lwd = 2)
     }
     
-    if (show_gamma_Vrai) {
-      sim_mat_gamma_vrai <- sapply(2:ncol(df), function(i) {
-        X = df[[i]]
-        L = nrow(df)
-        T = t_ext[length(t_ext)]
-        c = t_max/length(X)
-        delta_x = numeric(length(X))
-        delta_x[1] = X[1]
-        for (i in 2:length(X)){
-          delta_x[i] = X[i] - X[i - 1]
-        }
-        a = X[L]^2/(c*(L*sum(delta_x^2)-X[L]^2))
-        b = (X[L]*L)/(L*sum(delta_x^2)-X[L]^2)
-        delta_nouveau = qgamma(runif(length(t_ext)),shape = forme_est*T/length(t_ext), rate = b)
-        y = numeric(length(t_ext))
-        y[1] = 0
-        for (j in 2:length(t_ext)){
-          y[j]= delta_nouveau[j]+y[j-1]
-        }
-        return(y)
+    # Simulations Wiener
+    if(show_wiener_Vrai) {
+      p <- paramsWienerMaxVrai()
+      mu = p$mu
+      sigma = p$sigma
+      
+      sim_mat <- sapply(seq_along(mu), function(i) {
+        simulateWiener(1000, length(t_ext), mu[i], sigma[i], t_ext)
       })
-      matlines(t_ext, sim_mat_gamma_vrai, lty = 2, lwd = 2)
+      matlines(t_ext, sim_mat, lty = 2, lwd = 2)
     }
     
     # Ligne horizontale seuil

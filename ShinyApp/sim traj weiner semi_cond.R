@@ -1,4 +1,4 @@
-df <- read.csv2("/home/elfarchi/equipe_1/Semicond.csv")
+df <- read.csv2("/home/zeroualima/Desktop/equipe_1/Semicond.csv")
 t = df[[1]]
 x <- log(df[[1]])
 n = length(x)
@@ -15,6 +15,7 @@ for(i in 1:length(df[-1])){
   sigma = sqrt(1/n*sum(((y-mu*delta_t)^2)/delta_t))
   sigma_vect[i] = sigma
 }
+mean_sigma = mean(sigma_vect)
 sim <- rnorm(n, mean = mu_vect*delta_t, sd = mean_sigma*sqrt(delta_t))
 y_sim =cumsum(sim)
   matplot(
