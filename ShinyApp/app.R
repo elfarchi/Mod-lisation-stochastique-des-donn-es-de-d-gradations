@@ -63,9 +63,10 @@ ui <- page_navbar(
         fileInput("file", "Upload CSV File", accept = ".csv"),
         checkboxInput("log_it", "Log the dataset"),
         checkboxInput("show_stats", "Afficher statistiques"),
-        checkboxInput("show_Gamma_Simu", "Afficher les simulations de Gamma"),
+        checkboxInput("show_Gamma_Moments", "Afficher les simulations de Gamma (Moments)"),
+        checkboxInput("show_Gamma_Vrai", "Afficher les simulations de Gamma (Max.Vrai.)"),
         checkboxInput("takeoff_data", "Enlever les courbes reelles"),
-        numericInput("seuil", "Seuil horizontal :", value = 10),
+        numericInput("seuil", "Seuil horizontal :", value = 20),
         hr(),
         verbatimTextOutput("csv_stats")   # Affichage statistiques
       ),
@@ -246,9 +247,10 @@ server <- function(input, output, session) {
   # ---- Plot CSV + simulations ----
   output$plot3 <- renderPlot({
     show_data <- !isTRUE(input$takeoff_data)
-    show_sim  <- isTRUE(input$show_Gamma_Simu)
+    show_gamma_Moments  <- isTRUE(input$show_Gamma_Moments)
+    show_gamma_Vrai <- isTRUE(input$show_Gamma_Vrai)
     
-    req(show_data || show_sim)
+    req(show_data || show_gamma_Moments || show_gamma_Vrai)
     
     df <- data()
     req(df)
@@ -275,7 +277,7 @@ server <- function(input, output, session) {
     if (show_data) matlines(x, y_col, type = "b", pch = 16, lty = 1)
     
     # Simulations Gamma
-    if (show_sim) {
+    if (show_gamma_Moments) {
       p <- paramsGammaMoments()
       a <- p$a
       b <- p$b
@@ -285,8 +287,32 @@ server <- function(input, output, session) {
       })
       
       # Moyenne + trajectoires
-      lines(t_ext, rowMeans(sim_mat), col = "blue", lwd = 3)
+      # lines(t_ext, rowMeans(sim_mat), col = "blue", lwd = 3)
       matlines(t_ext, sim_mat, lty = 2, lwd = 2)
+    }
+    
+    if (show_gamma_Vrai) {
+      sim_mat_gamma_vrai <- sapply(2:ncol(df), function(i) {
+        X = df[[i]]
+        L = nrow(df)
+        T = t_ext[length(t_ext)]
+        c = t_max/length(X)
+        delta_x = numeric(length(X))
+        delta_x[1] = X[1]
+        for (i in 2:length(X)){
+          delta_x[i] = X[i] - X[i - 1]
+        }
+        a = X[L]^2/(c*(L*sum(delta_x^2)-X[L]^2))
+        b = (X[L]*L)/(L*sum(delta_x^2)-X[L]^2)
+        delta_nouveau = qgamma(runif(length(t_ext)),shape = forme_est*T/length(t_ext), rate = b)
+        y = numeric(length(t_ext))
+        y[1] = 0
+        for (j in 2:length(t_ext)){
+          y[j]= delta_nouveau[j]+y[j-1]
+        }
+        return(y)
+      })
+      matlines(t_ext, sim_mat_gamma_vrai, lty = 2, lwd = 2)
     }
     
     # Ligne horizontale seuil

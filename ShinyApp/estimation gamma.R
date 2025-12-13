@@ -21,6 +21,8 @@ simulate = function() {
   res[2,] = delta_x
   return(res)
 }
+
+
 mat_res = simulate()
 x = mat_res[1,]
 delta_x = mat_res[2,]
@@ -34,39 +36,3 @@ for (j in 2:nbr_pts){
   y[j]= delta_nouveau[j]+y[j-1]
 }
 lines(y,type='l',col = "orange2")
-
-#Calcul de biais 
-simulation = replicate(n,simulate())
-forme_ech = numeric(n)
-taux_ech = numeric(n)
-for(k in 1:n){
-  taux_ech[k] = (simulation[1,L,k]*L)/(L*sum(simulation[2,,k]^2)-simulation[1,L,k]^2)
-  forme_ech[k] = taux_ech[k]*simulation[1,L,k]/T
-}
-biais_forme = mean(forme_ech)-forme
-biais_taux = mean(taux_ech)-taux
-LOG <- log(delta_x)
-
-a <- function(b){
-  s <- 0
-  
-  for(i in 1:L){   # ✅ correct loop
-    if (!is.na(LOG[i]) && is.finite(LOG[i])) {   # ✅ correct test
-      s <- s + LOG[i]
-    }
-  }
-  
-  return(nbr_pts * log(b) + s - nbr_pts * digamma(b * x[L] / L))
-}
-
-ind = seq(1,20,length.out = 200)
-fct = sapply(ind,a)
-res <- uniroot(a, interval = c(0.001, 10))
-r = res$root
-plot(ind,fct,type = 'l')
-abline(h = 0, col = "red")          # ligne y = 0
-abline(v = res$root, col = "blue") # position du zéro
-points(res$root, 0, pch = 19)
-idx <- which(fct[-1] * fct[-length(fct)] < 0)
-cat("biais de la forme a :",biais_forme,"\n")
-cat("biais du taux b :",biais_taux)

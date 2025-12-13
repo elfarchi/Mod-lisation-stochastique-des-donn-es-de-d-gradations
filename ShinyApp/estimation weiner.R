@@ -1,4 +1,4 @@
-df <- read.csv2("/home/elfarchi/equipe_1/Semicond.csv")
+df <- read.csv2("/home/zeroualima/Desktop/equipe_1/Semicond.csv")
 mu = mu_vect[1]
 sigma = sigma_vect[1]
 L = 1000

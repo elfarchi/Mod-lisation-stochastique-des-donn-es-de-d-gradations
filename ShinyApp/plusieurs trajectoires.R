@@ -1,5 +1,5 @@
 
-df <- read.csv2("/home/elfarchi/equipe_1/Semicond.csv")
+df <- read.csv2("/home/zeroualima/Desktop/equipe_1/Semicond.csv")
 t = df[[1]]
 x <- log(df[[1]])
 n = length(x)
