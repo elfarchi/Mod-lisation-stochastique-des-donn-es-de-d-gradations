@@ -4,7 +4,7 @@ sigma = sigma_vect[1]
 L = 1000
 T = 20
 N=500
-h = 30
+h = 2.5
 x <- log(df[[1]])
 t = seq(0,x[35],length.out = L)
 simulate = function(mu,sigma) {
@@ -23,28 +23,24 @@ simulate = function(mu,sigma) {
   res = matrix(0,nrow = 2,ncol = L)
   res[1,] = X
   res[2,] = B
-  return(res)
+  return(X)
 }
-X_B = simulate(mu,sigma)
+X = simulate(mu,sigma)
 
 n = 100
-X= X_B[1,]
-B=X_B[2,]
 
 delta_res =X[2:L]-X[1:L-1]
 plot(t, X,type= 'l')
 mu_estimé = X[L]/(L*0.01)
 sigma_est = sqrt(sum((delta_res-mu*0.01)^2)/(L*0.01))
-B_nouvelle = simulate(mu,sigma)[2,]
 X_rep = replicate(n,simulate(mu,sigma))
-X_est = mu_estimé*t+sigma_est*B_nouvelle
 plot(t,X_est, type = 'l', col = "darkgreen")
 for(i in 1:n){
-  lines(t,X_rep[1,,i],type='l')
+  lines(t,X_rep[,i],type='l')
 }
 liste_t = numeric(n)
 for(k in 1:n){
-  liste_t[k]=t[which(X_rep[1,,k]>=h)[1]]
+  liste_t[k]=t[which(X_rep[,k]>=h)[1]]
 }
 library(statmod)
 
