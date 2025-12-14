@@ -281,8 +281,8 @@ server <- function(input, output, session) {
     
     # Logging éventuel
     log_it <- isTRUE(input$log_it)
-    x <- if (log_it) log(df[[1]]) else df[[1]]
-    y_col <- if (log_it) log(df[-1]) else df[-1]
+    x <- if (!log_it) df[[1]] else log(df[[1]])
+    y_col <- if (!log_it) df[-1] else log(df[-1])
     
     # Extension du domaine temporel pour prévoir dans le futur
     t_max <- max(x, na.rm = TRUE)
