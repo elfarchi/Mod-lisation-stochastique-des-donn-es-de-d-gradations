@@ -415,19 +415,20 @@ server <- function(input, output, session) {
   )
   output$plot4 <- renderPlot({
     req(X_stored(), t_stored())
+    L <- input$pt_nbr
     X <- X_stored()
     t <- t_stored()
     plot(t, X, type = 'l')
     abline(h = input$S, col ="purple")
     X_res <- rep(0, L)
-    if (input$model_maint == "ARD fixe") {
+    if (input$model_maint =="ARD fixe") {
       ARD_fixe(X, X_res, input$delta, input$nbr_maint, input$T,L)
       
     } else if (input$model_maint == "ARD1") {
       ARD_1(X, X_res, input$rho, input$nbr_maint,input$T,L)
       
     } else if (input$model_maint == "Changement de drift") {
-      drift_change(X, X_res, input$alpha,input$mu, input$beta, input$nbr_maint,input$T,L)
+      drift_change(X, X_res,input$mu, input$alpha, input$beta, input$nbr_maint,input$T,L)
     } else if (input$model_maint == "kijima"){
     }
     

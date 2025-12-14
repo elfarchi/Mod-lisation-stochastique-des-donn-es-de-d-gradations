@@ -25,6 +25,7 @@ ui <- page_navbar(
         numericInput("moyenne", "Moyenne :", 10, min = 0, max = 100),
         numericInput("variance", "Variance :", 10),
         numericInput("traj_nbr", "Nb trajectoires :", 7),
+        numericInput("T","Durée",10),
         numericInput("seuil", "Seuil :", 1)
       ),
       
@@ -58,25 +59,83 @@ ui <- page_navbar(
   # ---- PAGE 3 : Analyse d'un CSV ----
   nav_panel(
     "CSV plot",
-    sidebarLayout(
-      sidebarPanel(
+    page_sidebar(
+      sidebar = sidebar(
         fileInput("file", "Upload CSV File", accept = ".csv"),
+        selectInput(
+          inputId = "choix_du_modele",
+          label = "Le choix du modele d'estimation",
+          choices = c("maximum de vraisemblance", "moments")
+        ),
         checkboxInput("log_it", "Log the dataset"),
-        checkboxInput("show_stats", "Afficher statistiques"),
-        checkboxInput("show_Gamma_Simu", "Afficher les simulations de Gamma"),
         checkboxInput("takeoff_data", "Enlever les courbes reelles"),
         numericInput("seuil", "Seuil horizontal :", value = 10),
-        hr(),
-        verbatimTextOutput("csv_stats")   # Affichage statistiques
-      ),
-      
+        verbatimTextOutput("csv_stats"), #Affichage statistiques
+        conditionalPanel(
+          condition = "input.choix_du_modele == 'maximum de vraisemblance'",
+          checkboxInput("show_stats_mv", "Afficher statistiques"),
+          selectInput(
+            inputId = "one_or_more",
+            label = "nombre de trajectoires",
+            choices = c("1 seul trajectoire", "tous les trajectoires")
+          )
+        ),
+        conditionalPanel(
+          condition = "input.choix_du_modele == 'moments'",
+          checkboxInput("show_stats_mom", "Afficher statistiques")
+        ),
+        conditionalPanel(
+          condition = "input.choix_du_modele == ' '"
+        )
+        )
+      ,
       mainPanel(
         plotOutput("plot3", height = "800px")
+      )
+  )),
+  nav_panel(
+    "Processus Weiner avec maintenance imparfaite",
+    page_sidebar(
+      sidebar = sidebar(
+        selectInput(
+          inputId = "model_maint",
+          label = "Modèle de maintenance imparfaite",
+          choices = c("Pas de maintenance","ARD fixe","ARD1","Changement de drift","kijima")
+        ),
+        numericInput("pt_nbr", "nombre de points ",1000),
+        numericInput("mu", "paramètre de tendance :", 1),
+        numericInput("sigma2", "paramètre de variabilité :", 5),
+        numericInput("T","intervalle de temps :" ,50), 
+        numericInput("S","seuil :", 40),
+        conditionalPanel(
+          condition = "input.model_maint == 'ARD fixe'",
+          numericInput("nbr_maint","Nombre de maintenances :", 4),
+          numericInput("delta","constante de réduction :", 0)
+          
+        ),
+        conditionalPanel(
+          condition = "input.model_maint == 'ARD1'",
+          numericInput("nbr_maint","Nombre de maintenances", 4),
+          numericInput("rho","taux de restauration", 0)
+          
+        ),
+        conditionalPanel(
+          condition = "input.model_maint == 'Changement de drift'",
+          numericInput("nbr_maint","Nombre de maintenances", 4),
+          numericInput("alpha","facteur de multiplication", 1),
+          numericInput("beta","facteur de modification alpha/beta", 1)
+        ),
+        conditionalPanel(
+          condition = "input.model_maint == 'kijima'",
+        ),
+        conditionalPanel(condition = "input.model_maint == 'Pas de maintenance")
+      ),
+      mainPanel(
+        plotOutput("plot4", height = "800px"),
       )
     )
   )
 )
-
 # -------------------------------
 # SERVEUR
 # -------------------------------
@@ -87,10 +146,10 @@ server <- function(input, output, session) {
   # ============================================================
   
   # Fonction qui simule une trajectoire de Wiener (décomposition KL)
-  simulateWiener = function(N, L, mu, sigma, t) {
-    Z_k = rnorm(N)          # Coefficients aléatoires
+  simulateWiener = function(N, L, mu, sigma, T) {
+    Z_k = rnorm(N) # Coefficients aléatoires
+    t = seq(0,T,length.out = L)
     B = rep(0,L)            # Stockage du bruit brownien approché
-    
     for (i in 1:L){
       u = t[i]
       s <- 0
@@ -101,7 +160,6 @@ server <- function(input, output, session) {
       }
       B[i] = s
     }
-    
     # Processus avec dérive : X(t) = μt + σB(t)
     X = mu*t + sigma*B
     return(X)
@@ -114,7 +172,7 @@ server <- function(input, output, session) {
     sigma = sqrt(input$variance)
     traj_nbr = input$traj_nbr
     L = input$pt_nbr
-    T = 10
+    T = input$T
     N=1000
     
     # Construction de l'échelle temporelle
@@ -129,11 +187,11 @@ server <- function(input, output, session) {
     
     # Cas une seule trajectoire
     if (traj_nbr == 1){
-      plot(t,simulateWiener(N, L, mu, sigma, t),type='l')
+      plot(t,simulateWiener(N, L, mu, sigma, T),type='l')
       abline(0, mu, col='red')
     } else {
       # Plusieurs trajectoires
-      results = replicate(traj_nbr, simulateWiener(N, L, mu, sigma, t))
+      results = replicate(traj_nbr, simulateWiener(N, L, mu, sigma, T))
       plot(t, results[, 1],type= 'l')
       for (i in 2:ncol(results)) lines(t, results[, i])
       abline(0, mu, col='red')
@@ -171,7 +229,7 @@ server <- function(input, output, session) {
     nbr_pts = input$pt_nbr
     forme = input$shape
     taux = input$rate
-    T = 10
+    T = input$T
     
     # Temps constant ou aléatoire
     if (model == "Constant") {
@@ -185,9 +243,9 @@ server <- function(input, output, session) {
     
     # Affichage
     if (traj_nbr == 1){
-      plot(t,simulateGamma(nbr_pts, forme, taux, t),type='l')
+      plot(t,simulateGamma(nbr_pts, forme, taux, T),type='l')
     } else {
-      results = replicate(traj_nbr, simulateGamma(nbr_pts, forme, taux, t))
+      results = replicate(traj_nbr, simulateGamma(nbr_pts, forme, taux, T))
       plot(t, results[, 1],type= 'l')
       for (i in 2:ncol(results)) lines(t, results[, i])
     }
@@ -204,6 +262,18 @@ server <- function(input, output, session) {
   data <- reactive({
     req(input$file)
     df <- read.csv2(input$file$datapath)
+  })
+  FILE <- reactiveVal(NULL)
+  observeEvent(input$file,{
+    req(input$file)
+    
+    filename <- input$file$name
+    if(filename == "Laser.csv"){
+      FILE("LASER")
+    }
+    else if (filename == "Semicond.csv"){
+      FILE("SEMI_CONDUCTEUR")
+    }
   })
   
   # Estimation des paramètres Gamma par la méthode des moments
@@ -234,51 +304,163 @@ server <- function(input, output, session) {
     return (list(t = t, a = a, b = b))
   })
   
-  # Affichage des stats
-  output$csv_stats <- renderPrint({
-    req(input$show_stats)
-    p <- paramsGammaMoments()
-    print("parametres de Gamma par la methode de moments")
-    print(p$a)
-    print(p$b)
+  
+  paramsWienerMaxVrai <- reactive({
+    df <- data()
+    t = df[[1]]
+    log_t = log(t)
+    n = length(t)
+    delta_t = diff(log_t)
+    mu = numeric(ncol(df) - 1)
+    sigma = numeric(ncol(df) - 1)
+    for (i in 1:length(df[-1])) {
+      X = log(df[-1][,i])
+      delta_X = diff(X)
+      mu[i] = (X[n]-X[1])/(log_t[n]-log_t[1])
+      sigma[i] = sqrt(1/n*sum((delta_X - mu[i]*delta_t)^2/delta_t))
+    }
+    return (list(t = t, mu = mu, sigma = sigma))
+  })
+  paramsWeinerplusieurstraj <- reactive({
+    df <- data()
+    t = df[[1]]
+    x <- log(df[[1]])
+    n = length(x)
+    m = length(df[-1])
+    y_mat = matrix(0,nrow=length(df[-1]), ncol = length(df[-1][,1]))
+    for(i in 1:length(df[-1])){
+      y_mat[i,] = log(df[-1][,i])
+    }  
+    y = y_mat[,2:n]-y_mat[,1:(n-1)]
+    delta_x = sapply(1:m, function(i){
+      y_mat[i,n]-y_mat[i,1]
+    })
+    delta_t = diff(x)
+    d_tmat = matrix(delta_t, nrow = m, ncol = length(delta_t), byrow = TRUE)
+    mu <- sum(delta_x)/((x[n]-x[1])*m)
+    sigma <- sqrt(1/(n*m)*sum(((y-mu*d_tmat)^2)/d_tmat))
+    res <- c(mu,sigma)
+    return(res)
+  })
+  
+  #Gamma par max de vraisemblance
+  paramsGammaMV <- reactive({
+    req(input$show_Gamma_Simu)
+    df <- data()
+    T <- max(df[[1]])
+    df_sans_temps <- df[-1]
+    nbr_pts <- nrow(df_sans_temps)
+    
+    ind <- seq(1, 200, length.out = 5000)
+    x_n_vect <- numeric(ncol(df_sans_temps))
+    
+    s_vect <- sapply(1:ncol(df_sans_temps), function(i) {
+      
+      colonne_i <- df_sans_temps[, i]
+      delta_X <- c(colonne_i[1], diff(colonne_i))
+      Log_delta_X <- log(delta_X)
+      
+      x_n_vect[i] <<- colonne_i[length(colonne_i)]
+      sum(Log_delta_X)
+    })
+    
+    func <- function(b, s, x_n, nbr_pts) {
+      nbr_pts * log(b) + s - nbr_pts * digamma(b * x_n / nbr_pts)
+    }
+    
+    fct <- sapply(1:length(s_vect), function(j) {
+      sapply(ind, function(b) func(b, s_vect[j], x_n_vect[j], nbr_pts))
+    })
+    
+    b_ech <- numeric(ncol(df_sans_temps))
+    a_ech <- numeric(ncol(df_sans_temps))
+    
+    for (j in 1:ncol(fct)) {
+      idx <- which(fct[-1, j] * fct[-nrow(fct), j] < 0)
+      b_ech[j] <- ind[idx[1]]
+      a_ech[j] <- b_ech[j] * x_n_vect[j] / T
+    }
+    return(list(a = a_ech, b = b_ech))
   })
   
   # ---- Plot CSV + simulations ----
   output$plot3 <- renderPlot({
     show_data <- !isTRUE(input$takeoff_data)
-    show_sim  <- isTRUE(input$show_Gamma_Simu)
+    show_gamma_Moments  <- isTRUE(input$show_Gamma_Moments)
+    show_wiener_Vrai <- isTRUE(input$show_Wiener_Vrai)
     
-    req(show_data || show_sim)
+    req(show_data || show_gamma_Moments || show_wiener_Vrai)
     
     df <- data()
     req(df)
-    
-    # Logging éventuel
-    log_it <- isTRUE(input$log_it)
-    x <- if (log_it) log(df[[1]]) else df[[1]]
-    y_col <- if (log_it) log(df[-1]) else df[-1]
+    t <- df[[1]]
+    Y <- df[-1] 
+    FILE_TYPE = FILE()
+    if(FILE_TYPE == "SEMI_CONDUCTEUR"){
+      t <- log(t)
+      log_y_col <- log(Y)
+      matplot(t,log_y_col, type = "b",pch = 16)
+      if(input$choix_du_modele == "maximum de vraisemblance"){
+        if(input$one_or_more == "1 seul trajectoire"){
+          t_ext <- t
+          delta_t <- diff(t_ext)
+          p <- paramsWienerMaxVrai()
+          mu = p$mu
+          sigma = p$sigma
+          sim_mat <- sapply(1:length(mu), function(i) {
+            rnorm(length(t_ext),mean = mu[i]*delta_t, sd = sigma[i]*sqrt(delta_t))
+            #simulateWiener(1000, length(t_ext), mu[i], sigma[i], t[length(t)])
+          })
+          sim_maty= sapply(1:ncol(sim_mat), function(j){
+            cumsum(sim_mat[,j])
+          })
+          matplot(t_ext, sim_maty,,type = 'b',pch = 16)
+        } else{#plusieurs trajectoires
+          t_ext <- t
+          delta_t <- diff(t_ext)
+          p <- paramsWeinerplusieurstraj()
+          mu = p[1]
+          sigma = p[2]
+          sim <- rnorm(length(t_ext), mean = mu*delta_t, sd = sigma*sqrt(delta_t))
+          y_sim <- cumsum(sim)
+          lines(t_ext,y_sim, col = 'gold',type = 'b',pch = 16)
+        }
+      }else{#moments
+        
+      }
+      }else{#laser
+        if(input$choix_du_modele == "maximum de vraisemblance"){
+          
+        }else{
+          if(input$show_stats_mom){
+            matplot(df[[1]],df[-1],type="b",pch = 16)
+            p<-paramsGammaMoments()
+            cat("Paramètres Gamma — méthode des moments\n")
+            cat("a =\n"); print(p$a)
+            cat("b =\n"); print(p$b)
+          }
+        }
+    }
+    #log_it <- isTRUE(input$log_it)
+    #x <- if (log_it) log(df[[1]]) else df[[1]]
+    #y_col <- if (log_it) log(df[-1]) else df[-1]
     
     # Extension du domaine temporel pour prévoir dans le futur
-    t_max <- max(x, na.rm = TRUE)
-    xlim <- c(0, 3 * t_max)
-    t_ext <- seq(from = min(x), to = xlim[2], length.out = 200)
+    #t_max <- max(x, na.rm = TRUE)
+    #xlim <- c(0, 3 * t_max)
+    #t_ext <- seq(from = min(x), to = xlim[2], length.out = 200)
     
-    seuil <- input$seuil
-    ylim <- c(0, seuil * 1.2)
+    #ylim <- c(0, seuil * 1.2)
     
     # Plot vide
-    plot(NA, xlim = xlim, ylim = ylim,
-         xlab = "X", ylab = "Valeurs",
-         main = "Courbes depuis CSV", type = "n")
+    #plot(NA, xlim = xlim, ylim = ylim,
+    #     xlab = "X", ylab = "Valeurs",
+    #     main = "Courbes depuis CSV", type = "n")
     
     # Courbes réelles
-    if (show_data) matlines(x, y_col, type = "b", pch = 16, lty = 1)
+    #if (show_data) matlines(x, y_col, type = "b", pch = 16, lty = 1)
     
     # Simulations Gamma
-    if (show_sim) {
-      p <- paramsGammaMoments()
-      a <- p$a
-      b <- p$b
       
       sim_mat <- sapply(seq_along(a), function(i) {
         simulateGamma(length(t_ext), a[i], b[i], t_ext)
@@ -287,10 +469,123 @@ server <- function(input, output, session) {
       # Moyenne + trajectoires
       lines(t_ext, rowMeans(sim_mat), col = "blue", lwd = 3)
       matlines(t_ext, sim_mat, lty = 2, lwd = 2)
-    }
+    
+    output$csv_stats <- renderPrint({
+      req(input$show_stats)
+      if (input$choix_du_modele == "moments") {
+        p <- paramsGammaMoments()
+        cat("Paramètres Gamma — méthode des moments\n")
+        cat("a =\n"); print(p$a)
+        cat("b =\n"); print(p$b)
+      } else {
+        p <- paramsGammaMV()
+        cat("Paramètres Gamma — maximum de vraisemblance\n")
+        cat("a =\n"); print(p$a)
+        cat("b =\n"); print(p$b)
+      }
+    })
+    
     
     # Ligne horizontale seuil
+    seuil <- input$seuil
     abline(h = seuil, col = "red", lwd = 2)
+  })
+  
+  # ============================================================
+  # PAGE 4 : Processus Weiner avec maintenance imparfaite
+  # ============================================================  
+  ARD_1 <- function(X,X_maintenance,rho,nbr_maint,T,L){
+    nbr_maint = nbr_maint+1
+    idx_maint <- floor(seq(1, L, length.out = nbr_maint + 2))
+    t <- seq(0, T, length.out = L)
+    t_maintenance = rep(0,nbr_maint+1)
+    
+    for( i in 1:(nbr_maint+1)){
+      t_maintenance[i]= t[idx_maint[i]]
+    }
+    X_maintenance[1:(idx_maint[2]-1)] = X[1: (idx_maint[2]-1)]
+    delta <- 0
+    for(i in 2:(length(idx_maint)-1)){
+      X_maintenance[idx_maint[i]] = (1-rho)*X[idx_maint[i]]
+      delta = X[idx_maint[i]]-X_maintenance[idx_maint[i]]
+      X_maintenance[(idx_maint[i]+1):(idx_maint[i+1]-1)] = X[(idx_maint[i]+1):(idx_maint[i+1]-1)]-delta
+    }
+    abline(v = t_maintenance[2:(length(t_maintenance) - 1)],
+           col = "red", lwd = 1)
+    X_maintenance[L] =X[L]-delta
+    lines(t,X_maintenance, type ='l', col="blue")
+  }
+  ARD_fixe <- function(X,X_maintenancefixe,petit_delta,nbr_maint,T,L){
+    nbr_maint = nbr_maint+1
+    idx_maint <- floor(seq(1, L, length.out = nbr_maint + 2))
+    t <- seq(0, T, length.out = L)
+    t_maintenance = rep(0,nbr_maint+1)
+    for( i in (1:nbr_maint+1)){
+      t_maintenance[i]= t[idx_maint[i]]
+    }
+    X_maintenancefixe[1:(idx_maint[2]-1)] = X[1: (idx_maint[2]-1)]
+    for(i in 2:(length(idx_maint)-1)){
+      X_maintenancefixe[idx_maint[i]:(idx_maint[i+1]-1)] = X[(idx_maint[i]):(idx_maint[i+1]-1)]-petit_delta*i
+    }
+    abline(v = t_maintenance[2:(length(t_maintenance) - 1)],
+           col = "red", lwd = 1)
+    X_maintenancefixe[L] =X[L]-petit_delta*(length(idx_maint)-1)
+    lines(t,X_maintenancefixe, type ='l', col="green")
+  }
+  drift_change <- function(X,X_drift,mu,alpha,beta,nbr_maint,T,L){
+    nbr_maint = nbr_maint+1
+    idx_maint <- floor(seq(1, L, length.out = nbr_maint + 1))
+    t <- seq(0, T, length.out = L)
+    t_maintenance = rep(0,nbr_maint+1)
+    for( i in 1:(nbr_maint+1)){
+      t_maintenance[i]= t[idx_maint[i]]
+    }
+    X_drift[1:(idx_maint[2]-1)] = X[1: (idx_maint[2]-1)]
+    X = X - mu*t
+    for(i in 2:(length(idx_maint)-1)){
+      alpha = alpha/beta
+      X = X+mu*alpha*t
+      X_drift[idx_maint[i]:(idx_maint[i+1]-1)] = X[(idx_maint[i]):(idx_maint[i+1]-1)]
+      X= X-mu*alpha*t
+    }
+    abline(v = t_maintenance[2:(length(t_maintenance) - 1)],
+           col = "red", lwd = 1)
+    X_drift[L]=(X+mu*alpha*t)[L]
+    lines(t,X_drift,type='l',col = "cyan")
+  }
+  X_stored <- reactiveVal(NULL)
+  t_stored <- reactiveVal(NULL)
+  observeEvent(
+    list(input$pt_nbr, input$mu, input$sigma2, input$T),
+    {
+      L <- input$pt_nbr
+      sigma <- sqrt(input$sigma2)
+      sim <- simulateWiener(N = 1000,L = L,mu = input$mu,sigma = sigma,T = input$T)
+      
+      t_stored(seq(0, input$T, length.out = L))
+      X_stored(sim)
+    },
+    ignoreInit = TRUE
+  )
+  output$plot4 <- renderPlot({
+    req(X_stored(), t_stored())
+    L <- input$pt_nbr
+    X <- X_stored()
+    t <- t_stored()
+    plot(t, X, type = 'l')
+    abline(h = input$S, col ="purple")
+    X_res <- rep(0, L)
+    if (input$model_maint =="ARD fixe") {
+      ARD_fixe(X, X_res, input$delta, input$nbr_maint, input$T,L)
+      
+    } else if (input$model_maint == "ARD1") {
+      ARD_1(X, X_res, input$rho, input$nbr_maint,input$T,L)
+      
+    } else if (input$model_maint == "Changement de drift") {
+      drift_change(X, X_res,input$mu, input$alpha, input$beta, input$nbr_maint,input$T,L)
+    } else if (input$model_maint == "kijima"){
+    }
+    
   })
 }
 
