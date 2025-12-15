@@ -1,0 +1,80 @@
+```{r}
+# =====================
+# Model parameters
+# =====================
+L <- 10.0        # failure threshold
+h <- 6.0         # maintenance threshold
+a <- 0.5         # reduction factor (0 < a < 1)
+
+mu <- 4.0        # drift
+sigma <- 0.5     # volatility
+
+dt <- 0.001      # time step
+T_inspect <- 0.1 # inspection period
+Nmax <- 5e6      # numerical safety
+
+# =====================
+# Initialization
+# =====================
+X <- numeric()
+t <- numeric()
+
+X[1] <- 0.0
+t[1] <- 0.0
+
+X_M <- numeric()   # states before maintenance
+t_M <- numeric()   # maintenance times
+
+next_inspection <- T_inspect
+n <- 1
+
+# =====================
+# Simulation
+# =====================
+while (X[n] < L && n < Nmax) {
+
+  # Brownian increment
+  dB <- sqrt(dt) * rnorm(1)
+
+  # Wiener evolution
+  X_new <- X[n] + mu * dt + sigma * dB
+  t_new <- t[n] + dt
+
+  # Failure: stop immediately
+  if (X_new >= L) {
+    X[n + 1] <- X_new
+    t[n + 1] <- t_new
+    break
+  }
+
+  # Periodic inspection
+  if (t_new >= next_inspection) {
+    if (X_new >= h) {
+      t_M <- c(t_M, t_new)
+      X_M <- c(X_M, X_new)
+      X_new <- a * X_new   # imperfect maintenance (state reduction)
+    }
+    next_inspection <- next_inspection + T_inspect
+  }
+
+  # Store
+  X[n + 1] <- X_new
+  t[n + 1] <- t_new
+  n <- n + 1
+}
+
+# =====================
+# Visualization
+# =====================
+plot(t, X, type = "l", lwd = 2,
+     xlab = "Time", ylab = "State X(t)",
+     main = "Wiener Process with Imperfect Maintenance")
+
+abline(h = h, lty = 2)
+abline(h = L, lty = 2)
+
+if (length(t_M) > 0) {
+  points(t_M, X_M, col = "red", pch = 16)
+}
+
+```
