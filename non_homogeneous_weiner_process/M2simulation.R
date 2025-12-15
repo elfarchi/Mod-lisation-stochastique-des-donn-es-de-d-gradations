@@ -7,7 +7,7 @@ delta    <- 0.2        # sampling interval (months)
 times    <- seq(0, t_max, by = delta)
 n        <- length(times)
 number_of_paths = 1000
-{plot(times, X, type = "l", col = "red")}
+plot(x = times,times,type="n")
 abline(a= w, b=0)
 time_to_failure = numeric(length = length(number_of_paths))
 for (i in 1:number_of_paths){
