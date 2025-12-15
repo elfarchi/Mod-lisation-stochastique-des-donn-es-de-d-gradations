@@ -24,7 +24,7 @@ simulate = function() {
 mat_res = simulate()
 x = mat_res[1,]
 delta_x = mat_res[2,]
-plot(x,type='l')
+plot(t,x,type='l')
 forme_est = x[L]^2/(0.01*(L*sum(delta_x^2)-x[L]^2))
 taux_est = (x[L]*L)/(L*sum(delta_x^2)-x[L]^2)
 delta_nouveau = qgamma(U,shape = forme_est*T/nbr_pts, rate = taux_est)
@@ -33,7 +33,7 @@ y[1] = 0
 for (j in 2:nbr_pts){
   y[j]= delta_nouveau[j]+y[j-1]
 }
-lines(y,type='l',col = "orange2")
+lines(t,y,type='l',col = "orange2")
 
 #Calcul de biais 
 simulation = replicate(n,simulate())

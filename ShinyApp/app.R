@@ -1,5 +1,6 @@
 library(shiny)
 library(bslib)
+library(statmod)
 
 # -------------------------------
 # INTERFACE UTILISATEUR (UI)
@@ -10,49 +11,124 @@ ui <- page_navbar(
   # ---- PAGE 1 : Processus de Wiener ----
   nav_panel(
     "Processus Wiener",
-    page_sidebar(
-      sidebar = sidebar(
-        
-        # Choix du modèle de génération des temps
-        selectInput(
-          inputId = "model_choice",
-          label = "La loi pour les dates de simulation :",
-          choices = c("Constant", "Aleatoire")
-        ),
-        
-        # Paramètres du modèle
-        numericInput("pt_nbr", "Nombre points :", 100, min = -100, max = 100),
-        numericInput("moyenne", "Moyenne :", 10, min = 0, max = 100),
-        numericInput("variance", "Variance :", 10),
-        numericInput("traj_nbr", "Nb trajectoires :", 7),
-        numericInput("T","Durée",10),
-        numericInput("seuil", "Seuil :", 1)
+    
+    tabsetPanel(
+      # ===== TAB 1 : Trajectoires =====
+      tabPanel(
+        "Trajectoires",
+        page_sidebar(
+          sidebar = sidebar(
+            numericInput("pt_nbr_1", "Nombre points :", 100),
+            numericInput("moyenne_1", "Moyenne :", 10),
+            numericInput("variance_1", "Variance :", 10),
+            numericInput("traj_nbr_1", "Nb trajectoires :", 7),
+            numericInput("T_1","Durée",10),
+            numericInput("seuil_1", "Seuil :", 10)
+          ),
+          mainPanel(
+            plotOutput("plot1",height = "800px")
+          )
+        )
       ),
       
-      plotOutput("plot1")
+      # ===== TAB 2 : Moyenne =====
+      tabPanel(
+        "simulation par max_de_vraisemblance",
+        
+        sidebarLayout(
+          sidebarPanel(
+            numericInput("pt_nbr_2", "Nombre points :", 100),
+            numericInput("moyenne_2", "Moyenne :", 10),
+            numericInput("variance_2", "Variance :", 10),
+            numericInput("traj_nbr_2", "Nb trajectoires :", 7),
+            numericInput("T_2","Durée_2",100),
+            numericInput("seuil_2", "Seuil :", 1)
+          ),
+          mainPanel(
+            plotOutput("plot1_mean",height = "800px")
+          )
+        )
+      ),
+      
+      # ===== TAB 3 : Distribution =====
+      tabPanel(
+        "Distribution finale",
+        sidebarLayout(
+          sidebarPanel(
+            numericInput("pt_nbr_3", "Nombre points :", 100),
+            numericInput("moyenne_3", "Moyenne :", 8),
+            numericInput("variance_3", "Variance :", 25),
+            numericInput("traj_nbr_3", "Nb trajectoires :", 1000),
+            numericInput("T_3","Durée",500),
+            numericInput("seuil_3", "Seuil :", 80)
+          ),
+          mainPanel(
+            plotOutput("plot1_hist",height = "800px")
+          )
+        )
+      )
     )
   ),
   
   # ---- PAGE 2 : Processus Gamma ----
   nav_panel(
     "Processus Gamma",
-    page_sidebar(
-      sidebar = sidebar(
-        
-        # Choix du modèle temporel
-        selectInput(
-          inputId = "model_choice",
-          label = "La loi pour les dates de simulation :",
-          choices = c("Constant", "Aleatoire")
-        ),
-        
-        numericInput("pt_nbr", "Nombre points :", 100, min = -100, max = 100),
-        numericInput("shape","forme :",3),
-        numericInput("traj_nbr", "Nb trajectoires :", 7),
-        numericInput("rate","taux :",5)
+    
+    tabsetPanel(
+      # ===== TAB 1 : Trajectoires =====
+      tabPanel(
+        "Trajectoires",
+        page_sidebar(
+          sidebar = sidebar(
+            numericInput("pt_nbr_4", "Nombre points :", 100),
+            numericInput("forme_4", "Forme :", 10),
+            numericInput("taux_4", "Taux :", 10),
+            numericInput("traj_nbr_4", "Nb trajectoires :", 7),
+            numericInput("T_4","Durée",10),
+            numericInput("seuil_4", "Seuil :", 10)
+          ),
+          mainPanel(
+            plotOutput("plot2",height = "800px")
+          )
+        )
       ),
       
-      plotOutput("plot2")
+      # ===== TAB 2 : Moyenne =====
+      tabPanel(
+        "simulation par max_de_vraisemblance",
+        
+        sidebarLayout(
+          sidebarPanel(
+            numericInput("pt_nbr_5", "Nombre points :", 100),
+            numericInput("forme_5", "Forme :", 10),
+            numericInput("taux_5", "Taux :", 10),
+            numericInput("traj_nbr_5", "Nb trajectoires :", 7),
+            numericInput("T_5","Durée",10),
+            numericInput("seuil_5", "Seuil :", 1)
+          ),
+          mainPanel(
+            plotOutput("plot2_mean",height = "800px")
+          )
+        )
+      ),
+      
+      # ===== TAB 3 : Distribution =====
+      tabPanel(
+        "Distribution finale",
+        sidebarLayout(
+          sidebarPanel(
+            numericInput("pt_nbr_6", "Nombre points :", 100),
+            numericInput("forme_6", "Forme :", 10),
+            numericInput("taux_6", "Taux :", 10),
+            numericInput("traj_nbr_6", "Nb trajectoires :", 700),
+            numericInput("T_6","Durée",90),
+            numericInput("seuil_6", "Seuil :", 70)
+          ),
+          mainPanel(
+            plotOutput("plot2_hist",height = "800px")
+          )
+        )
+      )
     )
   ),
   
@@ -126,7 +202,7 @@ ui <- page_navbar(
           numericInput("beta","facteur de modification alpha/beta", 1)
         ),
         conditionalPanel(
-          condition = "input.model_maint == 'kijima'",
+          condition = "input.model_maint == 'kijima'"
         ),
         conditionalPanel(condition = "input.model_maint == 'Pas de maintenance")
       ),
@@ -147,44 +223,43 @@ server <- function(input, output, session) {
   
   # Fonction qui simule une trajectoire de Wiener (décomposition KL)
   simulateWiener = function(N, L, mu, sigma, T) {
-    Z_k = rnorm(N) # Coefficients aléatoires
-    t = seq(0,T,length.out = L)
-    B = rep(0,L)            # Stockage du bruit brownien approché
-    for (i in 1:L){
-      u = t[i]
-      s <- 0
-      # Décomposition de Karhunen-Loève tronquée
-      for(j in 1:N){
-        e_ju = sqrt(8*T)/((2*j+1)*pi)*sin(((2*j+1)*pi*u)/(2*T))
-        s <- s+ Z_k[j]*e_ju
-      }
-      B[i] = s
+    
+    Z_k <- rnorm(N)
+    t <- seq(0, T, length.out = L)
+    
+    j <- 1:N
+    coef <- sqrt(8 * T) / ((2 * j + 1) * pi)
+    
+    B <- numeric(L)
+    
+    for (i in 1:L) {
+      u <- t[i]
+      e_ju <- coef * sin((2 * j + 1) * pi * u / (2 * T))
+      B[i] <- sum(Z_k * e_ju)
     }
-    # Processus avec dérive : X(t) = μt + σB(t)
-    X = mu*t + sigma*B
-    return(X)
+    
+    mu * t + sigma * B
   }
   
   # --- Plot du Wiener ---
   output$plot1 <- renderPlot({
-    model <- input$model_choice
-    mu = input$moyenne
-    sigma = sqrt(input$variance)
-    traj_nbr = input$traj_nbr
-    L = input$pt_nbr
-    T = input$T
+    mu = input$moyenne_1
+    sigma = sqrt(input$variance_1)
+    traj_nbr = input$traj_nbr_1
+    L = input$pt_nbr_1
+    T = input$T_1
     N=1000
     
     # Construction de l'échelle temporelle
-    if (model == "Constant") {
-      t = seq(0,T,length.out = L)
-    } else {
-      delta_t = runif(L - 1)
-      t = numeric(L)
-      t[1] = 0
-      for (i in 2:L) t[i] = t[i - 1] + delta_t[i - 1]
-    }
-    
+    #if (model == "Constant") {
+    #  t = seq(0,T,length.out = L)
+    #} else {
+    #  delta_t = runif(L - 1)
+    #  t = numeric(L)
+     # t[1] = 0
+    #  for (i in 2:L) t[i] = t[i - 1] + delta_t[i - 1]
+    #}
+    t = seq(0,T,length.out = L)
     # Cas une seule trajectoire
     if (traj_nbr == 1){
       plot(t,simulateWiener(N, L, mu, sigma, T),type='l')
@@ -197,25 +272,58 @@ server <- function(input, output, session) {
       abline(0, mu, col='red')
     }
   })
+  output$plot1_mean <- renderPlot({
+    mu = input$moyenne_2
+    sigma = sqrt(input$variance_2)
+    traj_nbr = input$traj_nbr_2
+    L = input$pt_nbr_2
+    N = 1000
+    T = input$T_2
+    results = replicate(traj_nbr, simulateWiener(N, L, mu, sigma, T))
+    t <- seq(0, T, length.out = L)
+    delta_x <-apply(results,2,diff)
+    delta_t = diff(t)
+    d_tmat = matrix(delta_t, nrow = L-1, ncol = traj_nbr)
+    mu_estimé <- sum(delta_x)/((t[L]-t[1])*traj_nbr)
+    sigma_estimé <- sqrt(1/((L-1)*traj_nbr)*sum(((delta_x-mu_estimé*d_tmat)^2)/d_tmat))
+    res <- c(mu_estimé,sigma_estimé)
+    plot(t,simulateWiener(N,L,res[1],res[2],T),type = 'l', col ="darkgreen")
+    legend("topleft", col = c("orange","purple"), lty = 1, cex = .8,
+           legend = c(paste("sigma estimé élevé au carré = ",res[2]^2),
+                      paste("mu estimé =  ",res[1])))
+  })
+  output$plot1_hist <- renderPlot({
+    mu = input$moyenne_3
+    sigma = sqrt(input$variance_3)
+    traj_nbr = input$traj_nbr_3
+    L = input$pt_nbr_3
+    N = 1000
+    T = input$T_3
+    h = input$seuil_3
+    results = replicate(traj_nbr, simulateWiener(N, L, mu, sigma, T))
+    t <- seq(0, T, length.out = L)
+    liste_t <- apply(results,2,function(x){
+      t[which(x>=h)[1]]
+    })
+    liste_t <- liste_t[!is.na(liste_t)]
+    hist(liste_t, prob = TRUE, breaks = 30,
+         main = "Sans maintenance", xlab = "Temps de traversée")
+    xx <- seq(min(liste_t), max(liste_t), length.out = 2000)
+    
+    lines(xx, dinvgauss(xx, mean = h/mu, shape = h^2/(sigma^2)),
+          col = "red", lwd = 2)
+  })
   
   # ============================================================
   # PAGE 2 : Processus Gamma
   # ============================================================
   
   # Simule un processus Gamma (increments indépendants Gamma)
-  simulateGamma = function(nbr_pts, forme, taux, t) {
+  simulateGamma = function(nbr_pts, forme, taux, T) {
     G = rep(0,nbr_pts)
     x = numeric(nbr_pts)
     x[1] = 0
-    delta_x = numeric(nbr_pts)
-    
-    # Première incrémentation
-    delta_x[1] = rgamma(1, shape = forme * t[1], rate = taux)
-    
-    # Incréments Gamma successifs
-    for (i in 2:nbr_pts) {
-      delta_x[i] = rgamma(1, shape = forme * (t[i] - t[i - 1]), rate = taux)
-    }
+    delta_x <- rgamma(nbr_pts, shape = forme * T/nbr_pts, rate = taux)
     
     # Processus cumulé
     for (i in 2:nbr_pts) x[i] = delta_x[i] + x[i - 1]
@@ -224,23 +332,13 @@ server <- function(input, output, session) {
   }
   
   output$plot2 <- renderPlot({
-    model <- input$model_choice
-    traj_nbr = input$traj_nbr
-    nbr_pts = input$pt_nbr
-    forme = input$shape
-    taux = input$rate
-    T = input$T
+    traj_nbr = input$traj_nbr_4
+    nbr_pts = input$pt_nbr_4
+    forme = input$forme_4
+    taux = input$taux_4
+    T = input$T_4
     
-    # Temps constant ou aléatoire
-    if (model == "Constant") {
-      t = seq(0,T,length.out = nbr_pts)
-    } else {
-      delta_t = runif(nbr_pts - 1)
-      t = numeric(nbr_pts)
-      t[1] = 0
-      for (i in 2:nbr_pts) t[i] = t[i - 1] + delta_t[i - 1]
-    }
-    
+    t = seq(0,T,length.out = nbr_pts)
     # Affichage
     if (traj_nbr == 1){
       plot(t,simulateGamma(nbr_pts, forme, taux, T),type='l')
@@ -253,7 +351,61 @@ server <- function(input, output, session) {
     # Ligne horizontale = moyenne du processus (théorique)
     abline(0, forme/taux, col='red')
   })
-  
+  output$plot2_mean <- renderPlot({
+    a = input$forme_5
+    b = input$taux_5
+    traj_nbr = input$traj_nbr_5
+    L = input$pt_nbr_5
+    T = input$T_5
+    results = replicate(traj_nbr, simulateGamma(L, a, b, T))
+    t <- seq(0, T, length.out = L)
+    nbr_pts <- L
+    
+    ind <- seq(1, 1000000, length.out = 500000)
+    x_n_vect <- numeric(traj_nbr)
+    s_vect <- sapply(1:traj_nbr, function(i) {
+      
+      traj_i <- results[, i]
+      delta_Xi <- diff(traj_i)
+      Log_delta_Xi <- log(delta_Xi)
+      Log_delta_Xi <- Log_delta_Xi[!is.infinite(Log_delta_Xi)]
+      s_vect[i] = sum(Log_delta_Xi)
+    })
+    s <- sum(s_vect)
+    x_n_vect <- sapply(1:traj_nbr,function(i){
+      results[,i][L]
+    })
+    func <- function(b, s, x_n, nbr_pts,traj_nbr) {
+      nbr_pts * traj_nbr*log(b) + s - nbr_pts *traj_nbr* digamma(b * sum(x_n) /(nbr_pts*traj_nbr))
+    }
+    fct <- sapply(ind,function(b){
+      func(b, s, x_n_vect, nbr_pts,traj_nbr)
+    })
+    idx <- which(fct[-1]* fct[-length(fct)] < 0)
+    b_est = ind[idx[1]]
+    a_est= (b_est*sum(x_n_vect))/(traj_nbr*T)
+    plot(t,simulateGamma(L,a_est,b_est,T),col = "blue",type='l')
+    legend("topleft", col = c("orange","purple"), lty = 1, cex = .8,
+           legend = c(paste("a = ",a_est),
+                      paste("b =  ",b_est)))
+    
+  })
+  output$plot2_hist <- renderPlot({
+    forme = input$forme_6
+    taux = input$taux_6
+    traj_nbr = input$traj_nbr_6
+    L = input$pt_nbr_6
+    T = input$T_6
+    h = input$seuil_6
+    results = replicate(traj_nbr, simulateGamma(L, forme, taux,T))
+    t <- seq(0, T, length.out = L)
+    liste_t <- apply(results,2,function(x){
+      t[which(x>=h)[1]]
+    })
+    liste_t <- liste_t[!is.na(liste_t)]
+    hist(liste_t, prob = TRUE, breaks = 30,
+         main = "Sans maintenance", xlab = "Temps de traversée")
+  })
   # ============================================================
   # PAGE 3 : Lecture CSV et estimation Gamma par moments
   # ============================================================
@@ -462,13 +614,13 @@ server <- function(input, output, session) {
     
     # Simulations Gamma
       
-      sim_mat <- sapply(seq_along(a), function(i) {
-        simulateGamma(length(t_ext), a[i], b[i], t_ext)
-      })
+      #sim_mat <- sapply(seq_along(a), function(i) {
+       # simulateGamma(length(t_ext), a[i], b[i], t_ext)
+      #})
       
       # Moyenne + trajectoires
-      lines(t_ext, rowMeans(sim_mat), col = "blue", lwd = 3)
-      matlines(t_ext, sim_mat, lty = 2, lwd = 2)
+      #lines(t_ext, rowMeans(sim_mat), col = "blue", lwd = 3)
+      #matlines(t_ext, sim_mat, lty = 2, lwd = 2)
     
     output$csv_stats <- renderPrint({
       req(input$show_stats)
@@ -553,7 +705,6 @@ server <- function(input, output, session) {
     X_drift[L]=(X+mu*alpha*t)[L]
     lines(t,X_drift,type='l',col = "cyan")
   }
-  X_stored <- reactiveVal(NULL)
   t_stored <- reactiveVal(NULL)
   observeEvent(
     list(input$pt_nbr, input$mu, input$sigma2, input$T),
