@@ -8,10 +8,10 @@ t1 = time.time()
 # Paramètres du modèle
 # =====================
 L = 10.0        # seuil de défaillance
-h_values = np.arange(4, 9, 0.1)        # seuils de maintenance
+h_values = np.arange(6.5, 7.5, 0.1)        # seuils de maintenance
 J_values = []   # Couts correspondants
 a = 0.6        # facteur de réduction (0 < a < 1)
-Cm = 10
+Cm = 20
 Cf = 100
 
 mu = 1        # dérive
@@ -19,7 +19,7 @@ sigma = 10       # volatilité
 
 dt = 0.01      # pas de discrétisation
 T_inspect = 0.1 # période d'inspection
-Nmax = 10_000  # sécurité numérique
+Nmax = 100_000  # sécurité numérique
 
 # =====================
 # Fonction Cout

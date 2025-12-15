@@ -5,15 +5,15 @@ import matplotlib.pyplot as plt
 # Paramètres du modèle
 # =====================
 L = 10.0        # seuil de défaillance
-h = 5.0         # seuils de maintenance
-a = 0.4         # facteur de réduction (0 < a < 1)
+h = 7         # seuils de maintenance
+a = 0.6         # facteur de réduction (0 < a < 1)
 
-mu = 1.5        # dérive
-sigma = 10       # volatilité
+mu = 3        # dérive
+sigma = 1      # volatilité
 
 dt = 0.01      # pas de discrétisation
 T_inspect = 0.1 # période d'inspection
-Nmax = 5_000  # sécurité numérique
+Nmax = 3_000  # sécurité numérique
 
 # =====================
 # Initialisation
