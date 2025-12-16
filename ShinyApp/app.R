@@ -70,6 +70,7 @@ ui <- page_navbar(
     )
   ),
   
+  
   # ---- PAGE 2 : Processus Gamma ----
   nav_panel(
     "Processus Gamma",
