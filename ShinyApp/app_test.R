@@ -59,8 +59,8 @@ ui <- page_navbar(
   # ---- PAGE 3 : Analyse d'un CSV ----
   nav_panel(
     "CSV plot",
-    sidebarLayout(
-      sidebarPanel(
+    page_sidebar(
+      sidebar = sidebar(
         fileInput("file", "Upload CSV File", accept = ".csv"),
         checkboxInput("log_it", "Log the dataset"),
         checkboxInput("show_stats", "Afficher statistiques"),
@@ -79,8 +79,8 @@ ui <- page_navbar(
   # # ---- PAGE 4: Processus Weiner avec maintenance imparfaite ----
   nav_panel(
     "Processus Weiner avec maintenance imparfaite",
-    sidebarLayout(
-      sidebarPanel(
+    page_sidebar(
+      sidebar = sidebar(
         selectInput(
           inputId = "model_maint",
           label = "Modèle de maintenance imparfaite",
@@ -398,12 +398,24 @@ server <- function(input, output, session) {
     X_drift[L]=(X+mu*alpha*t)[L]
     lines(t,X_drift,type='l',col = "cyan")
   }
+  X_stored <- reactiveVal(NULL)
+  t_stored <- reactiveVal(NULL)
+  observeEvent(
+    list(input$pt_nbr, input$mu, input$sigma2, input$T),
+    {
+      L <- input$pt_nbr
+      sigma <- sqrt(input$sigma2)
+      sim <- simulateWiener(N = 1000,L = L,mu = input$mu,sigma = sigma,T = input$T)
+      
+      t_stored(seq(0, input$T, length.out = L))
+      X_stored(sim)
+    },
+    ignoreInit = TRUE
+  )
   output$plot4 <- renderPlot({
-    L <- input$pt_nbr
-    N = 1000
-    sigma = sqrt(input$sigma2)
-    X <- simulateWiener(N, L, input$mu, sigma, input$T)
-    t <- seq(0, input$T, length.out = L)
+    req(X_stored(), t_stored())
+    X <- X_stored()
+    t <- t_stored()
     plot(t, X, type = 'l')
     X_res <- rep(0, L)
     if (input$model_maint == "ARD fixe") {

@@ -90,6 +90,7 @@ ui <- page_navbar(
         numericInput("mu", "paramètre de tendance :", 1),
         numericInput("sigma2", "paramètre de variabilité :", 5),
         numericInput("T","intervalle de temps :" ,50), 
+        numericInput("S","seuil :", 40),
         conditionalPanel(
           condition = "input.model_maint == 'ARD fixe'",
           numericInput("nbr_maint","Nombre de maintenances :", 4),
@@ -100,7 +101,7 @@ ui <- page_navbar(
           condition = "input.model_maint == 'ARD1'",
           numericInput("nbr_maint","Nombre de maintenances", 4),
           numericInput("rho","taux de restauration", 0)
-  
+          
         ),
         conditionalPanel(
           condition = "input.model_maint == 'Changement de drift'",
@@ -115,10 +116,10 @@ ui <- page_navbar(
       ),
       mainPanel(
         plotOutput("plot4", height = "800px"),
-        )
       )
     )
   )
+)
 
 # -------------------------------
 # SERVEUR
@@ -362,7 +363,7 @@ server <- function(input, output, session) {
   }
   ARD_fixe <- function(X,X_maintenancefixe,petit_delta,nbr_maint,T,L){
     nbr_maint = nbr_maint+1
-    idx_maint <- floor(seq(1, L, length.out = nbr_maint + 1))
+    idx_maint <- floor(seq(1, L, length.out = nbr_maint + 2))
     t <- seq(0, T, length.out = L)
     t_maintenance = rep(0,nbr_maint+1)
     for( i in (1:nbr_maint+1)){
@@ -414,21 +415,23 @@ server <- function(input, output, session) {
   )
   output$plot4 <- renderPlot({
     req(X_stored(), t_stored())
+    L <- input$pt_nbr
     X <- X_stored()
     t <- t_stored()
     plot(t, X, type = 'l')
+    abline(h = input$S, col ="purple")
     X_res <- rep(0, L)
-    if (input$model_maint == "ARD fixe") {
-        ARD_fixe(X, X_res, input$delta, input$nbr_maint, input$T,L)
+    if (input$model_maint =="ARD fixe") {
+      ARD_fixe(X, X_res, input$delta, input$nbr_maint, input$T,L)
       
     } else if (input$model_maint == "ARD1") {
-       ARD_1(X, X_res, input$rho, input$nbr_maint,input$T,L)
+      ARD_1(X, X_res, input$rho, input$nbr_maint,input$T,L)
       
     } else if (input$model_maint == "Changement de drift") {
-        drift_change(X, X_res, input$alpha,input$mu, input$beta, input$nbr_maint,input$T,L)
+      drift_change(X, X_res,input$mu, input$alpha, input$beta, input$nbr_maint,input$T,L)
     } else if (input$model_maint == "kijima"){
-        lines(h = 2,col ='orange')
     }
+    
   })
   
   

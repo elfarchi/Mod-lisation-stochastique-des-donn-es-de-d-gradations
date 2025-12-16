@@ -30,52 +30,64 @@ X_B = simulate(mu,sigma)
 
 n = 100
 X= X_B[1,]
-B = X_B[2,]
-#ARD proportionnel (ARD1)
-X_maintenance = rep(0,L)
-rho = 0.5
-X_maintenance[(L/4*0):(L/4*(0+1))] = X[(L/4*0): (L/4*(0+1))]
-t_maintenance = c(t[L/4],t[L/2],t[3*L/4],t[L])
-plot(t, X,type= 'l')
-for(i in 1:3){
-  X_maintenance[(L/4*i)] = (1-rho)*X[(L/4*i)]
-  delta = X[(L/4*i)]-X_maintenance[(L/4*i)]
-  X_maintenance[((L/4*i)+1):((L/4*(i+1))-1)] = X[((L/4*i)+1):((L/4*(i+1))-1)]-delta
-  abline(v = t_maintenance[i],col = 'red')
+ARD_1 <- function(X,X_maintenance,rho,nbr_maint,T,L){
+  nbr_maint = nbr_maint+1
+  idx_maint <- floor(seq(1, L, length.out = nbr_maint + 2))
+  t <- seq(0, T, length.out = L)
+  t_maintenance = rep(0,nbr_maint+1)
+  
+  for( i in 1:(nbr_maint+1)){
+    t_maintenance[i]= t[idx_maint[i]]
+  }
+  X_maintenance[1:(idx_maint[2]-1)] = X[1: (idx_maint[2]-1)]
+  delta <- 0
+  for(i in 2:(length(idx_maint)-1)){
+    X_maintenance[idx_maint[i]] = (1-rho)*X[idx_maint[i]]
+    delta = X[idx_maint[i]]-X_maintenance[idx_maint[i]]
+    X_maintenance[(idx_maint[i]+1):(idx_maint[i+1]-1)] = X[(idx_maint[i]+1):(idx_maint[i+1]-1)]-delta
+  }
+  abline(v = t_maintenance[2:(length(t_maintenance) - 1)],
+         col = "red", lwd = 1)
+  X_maintenance[L] =X[L]-delta
+  lines(t,X_maintenance, type ='l', col="blue")
 }
-X_maintenance[L] =X[L]-delta
-lines(t,X_maintenance, type ='l', col="blue")
-
-#Ard fixe
-X_maintenancefixe= rep(0,L)
-petit_delta = 1
-plot(t, X,type= 'l')
-X_maintenancefixe[(L/4*0):(L/4*(0+1))] = X[(L/4*0): (L/4*(0+1))]
-for(i in 1:3){
-  X_maintenancefixe[((L/4*i)):((L/4*(i+1))-1)] = X[((L/4*i)):((L/4*(i+1))-1)]-petit_delta*i
-  abline(v = t_maintenance[i],col = 'red')
+ARD_fixe <- function(X,X_maintenancefixe,petit_delta,nbr_maint,T,L){
+  nbr_maint = nbr_maint+1
+  idx_maint <- floor(seq(1, L, length.out = nbr_maint + 2))
+  t <- seq(0, T, length.out = L)
+  t_maintenance = rep(0,nbr_maint+1)
+  for( i in (1:nbr_maint+1)){
+    t_maintenance[i]= t[idx_maint[i]]
+  }
+  X_maintenancefixe[1:(idx_maint[2]-1)] = X[1: (idx_maint[2]-1)]
+  for(i in 2:(length(idx_maint)-1)){
+    X_maintenancefixe[idx_maint[i]:(idx_maint[i+1]-1)] = X[(idx_maint[i]):(idx_maint[i+1]-1)]-petit_delta*i
+  }
+  abline(v = t_maintenance[2:(length(t_maintenance) - 1)],
+         col = "red", lwd = 1)
+  X_maintenancefixe[L] =X[L]-petit_delta*(length(idx_maint)-1)
+  lines(t,X_maintenancefixe, type ='l', col="green")
 }
-X_maintenancefixe[L] =X[L]-petit_delta*3
-lines(t,X_maintenancefixe, type ='l', col="green")
-
-#Changement de drift
-plot(t,X,type ='l')
-X_drift = rep(0,L)
-alpha = 0.8
-X_drift[(L/4*0):(L/4*(0+1))] = X[(L/4*0): (L/4*(0+1))]
-X = X - mu*t
-for(i in 1:3){
-  alpha = alpha/1.1
-  X = X+mu*alpha*t
-  X_drift[((L/4*i)):((L/4*(i+1))-1)] = X[((L/4*i)):((L/4*(i+1))-1)]
-  X= X-mu*alpha*t
-  abline(v = t_maintenance[i],col = 'red')
-}
-X_drift[L]=(X+mu*alpha*t)[L]
-lines(t,X_drift,type='l',col = "cyan")
-t_test = rep(0,6)
-for( i in 1:6){
-  t_test[i]= i*L/6
+drift_change <- function(X,X_drift,mu,alpha,beta,nbr_maint,T,L){
+  nbr_maint = nbr_maint+1
+  idx_maint <- floor(seq(1, L, length.out = nbr_maint + 1))
+  t <- seq(0, T, length.out = L)
+  t_maintenance = rep(0,nbr_maint+1)
+  for( i in 1:(nbr_maint+1)){
+    t_maintenance[i]= t[idx_maint[i]]
+  }
+  X_drift[1:(idx_maint[2]-1)] = X[1: (idx_maint[2]-1)]
+  X = X - mu*t
+  for(i in 2:(length(idx_maint)-1)){
+    alpha = alpha/beta
+    X = X+mu*alpha*t
+    X_drift[idx_maint[i]:(idx_maint[i+1]-1)] = X[(idx_maint[i]):(idx_maint[i+1]-1)]
+    X= X-mu*alpha*t
+  }
+  abline(v = t_maintenance[2:(length(t_maintenance) - 1)],
+         col = "red", lwd = 1)
+  X_drift[L]=(X+mu*alpha*t)[L]
+  lines(t,X_drift,type='l',col = "cyan")
 }
 
 
