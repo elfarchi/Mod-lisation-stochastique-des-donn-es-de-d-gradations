@@ -20,10 +20,14 @@ Y = log(df[-1])
 for(i in 1:length(df[-1])){
   y_col <- log(df[-1][,i])
   y = diff(y_col) #1
-  delta_t = diff(x) #2
-  mu =  (y_col[n]-y_col[1])/(x[n]-x[1]) #3
+  delta_t = diff(x)#2
+  frac <- y/delta_t
+  mu =  sum(frac)/length(y)
+  #3
   mu_vect[i] = mu
-  sigma = sqrt(1/n*sum(((y-mu*delta_t)^2)/delta_t))
+  V = diff(x)/sqrt(delta_t)
+  
+  sigma = sqrt(1/n*sum((V - mean(V))^2))
   sigma_vect[i] = sigma
 }
 sim_mat <- sapply(1:length(mu_vect), function(i) {
