@@ -8,11 +8,11 @@ t1 = time.time()
 # Paramètres du modèle
 # =====================
 L = 10.0        # seuil de défaillance
-h_values = np.arange(6.5, 7.5, 0.1)        # seuils de maintenance
+h_values = np.arange(1, 9, 0.1)        # seuils de maintenance
 J_values = []   # Couts correspondants
 a = 0.6        # facteur de réduction (0 < a < 1)
-Cm = 20
 Cf = 100
+Cm = 80
 
 mu = 1        # dérive
 sigma = 10       # volatilité
@@ -107,20 +107,3 @@ print((t2 - t1)/60)
 
 print(J_values)
 print(h_values[min_idx])
-
-# # =====================
-# # Visualisation
-# # =====================
-# plt.figure(figsize=(10, 5))
-# plt.plot(t, X, label="Processus X(t)")
-# plt.axhline(h, linestyle="--", label="Seuil maintenance h")
-# plt.axhline(L, linestyle="--", label="Seuil défaillance L")
-
-# if t_M:
-#     plt.scatter(t_M, X_M, color="red", s=20, label="Maintenances")
-
-# plt.xlabel("Temps")
-# plt.ylabel("État")
-# plt.legend()
-# plt.grid(True)
-# plt.show()
