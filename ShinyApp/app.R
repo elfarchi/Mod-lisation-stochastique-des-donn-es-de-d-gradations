@@ -85,7 +85,6 @@ ui <- page_navbar(
             numericInput("taux_4", "Taux :", 10),
             numericInput("traj_nbr_4", "Nb trajectoires :", 7),
             numericInput("T_4","Durée",10),
-            numericInput("seuil_4", "Seuil :", 10)
           ),
           mainPanel(
             plotOutput("plot2",height = "800px")
@@ -95,7 +94,7 @@ ui <- page_navbar(
       
       # ===== TAB 2 : Moyenne =====
       tabPanel(
-        "simulation par max_de_vraisemblance",
+        "simulation par max_de_vraisemblance et moments",
         
         sidebarLayout(
           sidebarPanel(
@@ -104,7 +103,6 @@ ui <- page_navbar(
             numericInput("taux_5", "Taux :", 10),
             numericInput("traj_nbr_5", "Nb trajectoires :", 7),
             numericInput("T_5","Durée",10),
-            numericInput("seuil_5", "Seuil :", 1)
           ),
           mainPanel(
             plotOutput("plot2_mean",height = "800px")
@@ -141,7 +139,7 @@ ui <- page_navbar(
         selectInput(
           inputId = "choix_du_modele",
           label = "Le choix du modele d'estimation",
-          choices = c("maximum de vraisemblance", "moments")
+          choices = c("pas d'estimation","maximum de vraisemblance", "moments")
         ),
         checkboxInput("log_it", "Log the dataset"),
         checkboxInput("takeoff_data", "Enlever les courbes reelles"),
@@ -158,10 +156,15 @@ ui <- page_navbar(
         ),
         conditionalPanel(
           condition = "input.choix_du_modele == 'moments'",
-          checkboxInput("show_stats_mom", "Afficher statistiques")
+          checkboxInput("show_stats_mom", "Afficher statistiques"),
+          selectInput(
+            inputId = "one_or_more",
+            label = "nombre de trajectoires",
+            choices = c("1 seul trajectoire", "tous les trajectoires")
+          )
         ),
         conditionalPanel(
-          condition = "input.choix_du_modele == ' '"
+          condition = "input.choix_du_modele == 'pas d'estimation'"
         )
         )
       ,
@@ -279,6 +282,7 @@ server <- function(input, output, session) {
     L = input$pt_nbr_2
     N = 1000
     T = input$T_2
+    #max de vraisemblance à plusieurs trajectoires
     results = replicate(traj_nbr, simulateWiener(N, L, mu, sigma, T))
     t <- seq(0, T, length.out = L)
     delta_x <-apply(results,2,diff)
@@ -287,7 +291,16 @@ server <- function(input, output, session) {
     mu_estimé <- sum(delta_x)/((t[L]-t[1])*traj_nbr)
     sigma_estimé <- sqrt(1/((L-1)*traj_nbr)*sum(((delta_x-mu_estimé*d_tmat)^2)/d_tmat))
     res <- c(mu_estimé,sigma_estimé)
-    plot(t,simulateWiener(N,L,res[1],res[2],T),type = 'l', col ="darkgreen")
+    #momentsà plusieurs trajectoires
+    S <- sapply(1:traj_nbr,function(i){
+      sum(delta_x[,i])
+    })
+    mu_est <- mean(S)/T
+    sigma_est = sqrt(var(S)/T)
+    sim_1 <- simulateWiener(N,L,res[1],res[2],T)
+    B <- (sim_1-res[1]*t)/res[2]
+    plot(t,sim_1,type = 'l', col ="darkgreen")
+    lines(t,mu_est*t+sigma_est*B,type = 'l', col ="hotpink")
     legend("topleft", col = c("orange","purple"), lty = 1, cex = .8,
            legend = c(paste("sigma estimé élevé au carré = ",res[2]^2),
                       paste("mu estimé =  ",res[1])))
@@ -360,7 +373,7 @@ server <- function(input, output, session) {
     results = replicate(traj_nbr, simulateGamma(L, a, b, T))
     t <- seq(0, T, length.out = L)
     nbr_pts <- L
-    
+    #max vraisemblance
     ind <- seq(1, 1000000, length.out = 500000)
     x_n_vect <- numeric(traj_nbr)
     s_vect <- sapply(1:traj_nbr, function(i) {
@@ -384,9 +397,17 @@ server <- function(input, output, session) {
     idx <- which(fct[-1]* fct[-length(fct)] < 0)
     b_est = ind[idx[1]]
     a_est= (b_est*sum(x_n_vect))/(traj_nbr*T)
-    plot(t,simulateGamma(L,a_est,b_est,T),col = "blue",type='l')
-    legend("topleft", col = c("orange","purple"), lty = 1, cex = .8,
-           legend = c(paste("a = ",a_est),
+    #méthode des moments
+    delta_results = apply(results,2,diff)
+    S <- sapply(1:traj_nbr,function(i){
+      sum(delta_results[,i])
+    })
+    a_estimé = mean(S)^2/(var(S)*T)
+    b_estimé = mean(S)/var(S)
+    plot(t,simulateGamma(L,a_est,b_est,T),col = "blue",type="l")
+    lines(t,simulateGamma(L,a_estimé,b_estimé,T),col = "cyan",type = "l")
+    legend("topleft", col = c("blue","cyan","orange","purple"), lty = 1, cex = .8,
+           legend = c("max de vraisemblance","moments", paste("a = ",a_est),
                       paste("b =  ",b_est)))
     
   })
@@ -427,8 +448,23 @@ server <- function(input, output, session) {
       FILE("SEMI_CONDUCTEUR")
     }
   })
-  
-  # Estimation des paramètres Gamma par la méthode des moments
+  #Weiner -> Moments -> plusieurs trajectoires
+  paramweinerMomentsplusieurstraj <- reactive({
+    df <- data()
+    t = df[[1]]
+    log_t = log(t)
+    Y = log(df[-1])
+    n = length(t)
+    delta_t = diff(log_t)
+    delta_X = apply(Y,2,diff)
+    s <- sapply(1:ncol(Y),function(i){
+      sum(delta_X[,i])
+    })
+    mu <- mean(s)/sum(delta_t)
+    sigma <- sqrt(var(s)/sum(delta_t))
+    return (list(mu = mu, sigma = sigma))
+  })
+  #   Gamma -> Moments -> 1 trajectoire
   paramsGammaMoments <- reactive({
     df <- data()
     t = df[[1]]
@@ -456,7 +492,7 @@ server <- function(input, output, session) {
     return (list(t = t, a = a, b = b))
   })
   
-  
+  #Weiner -> Max vrai -> 1 trajectoire
   paramsWienerMaxVrai <- reactive({
     df <- data()
     t = df[[1]]
@@ -473,6 +509,37 @@ server <- function(input, output, session) {
     }
     return (list(t = t, mu = mu, sigma = sigma))
   })
+  
+  # Weiner -> Moments -> 1 seul trajectoire
+  paramsweinerMoments <- reactive({
+    df<- data()
+    t = df[[1]]
+    x <- log(df[[1]])
+    n = length(x)
+    m = length(df[-1])
+    mu_vect = numeric(m)
+    sigma_vect = numeric(m)
+    log_t = log(t)
+    Y = log(df[-1])
+    for(i in 1:length(df[-1])){
+      y_col <- log(df[-1][,i])
+      y = diff(y_col) #1
+      delta_t = diff(x) #2
+      mu =  (y_col[n]-y_col[1])/(x[n]-x[1]) #3
+      mu_vect[i] = mu
+      sigma = sqrt(1/n*sum(((y-mu*delta_t)^2)/delta_t))
+      sigma_vect[i] = sigma
+    }
+    sim_mat <- sapply(1:length(mu_vect), function(i) {
+      rnorm(length(t),mean = mu_vect[i]*delta_t, sd = sigma_vect[i]*sqrt(delta_t))
+    })
+    sim_maty= sapply(1:ncol(sim_mat), function(j){
+      cumsum(sim_mat[,j])
+    })
+    return(list(mu= mu_vect,sigma= sigma_vect))
+  })
+  
+  # Weiner -> Max vrai -> plusieurs traj
   paramsWeinerplusieurstraj <- reactive({
     df <- data()
     t = df[[1]]
@@ -495,9 +562,8 @@ server <- function(input, output, session) {
     return(res)
   })
   
-  #Gamma par max de vraisemblance
+  #Gamma par max de vraisemblance -> 1 trajectoire
   paramsGammaMV <- reactive({
-    req(input$show_Gamma_Simu)
     df <- data()
     T <- max(df[[1]])
     df_sans_temps <- df[-1]
@@ -534,15 +600,54 @@ server <- function(input, output, session) {
     }
     return(list(a = a_ech, b = b_ech))
   })
-  
+  #Gamma -> Max vrai -> plusieurs trajectoires
+  paramsGammaMVplusieurstraj <- reactive({
+    df <- data()
+    t <- df[[1]]
+    T <- sum(diff(t))
+    Y <- df[-1]
+    nbr_pts <- nrow(Y)
+    traj_nbr <- ncol(df[-1])
+    ind <- seq(1, 2000, length.out = 5000)
+    x_n_vect <- numeric(traj_nbr)
+    s_vect <- sapply(1:traj_nbr, function(i) {
+      traj_i <- Y[, i]
+      delta_Xi <- diff(traj_i)
+      Log_delta_Xi <- log(delta_Xi)
+      Log_delta_Xi <- Log_delta_Xi[!is.infinite(Log_delta_Xi)]
+      sum(Log_delta_Xi)
+    })
+    s <- sum(s_vect)
+    x_n_vect <- sapply(1:traj_nbr,function(i){
+      Y[,i][nbr_pts]
+    })
+    func <- function(b, s, x_n, nbr_pts,traj_nbr) {
+      nbr_pts * traj_nbr*log(b) + s - nbr_pts *traj_nbr* digamma(b * sum(x_n) /(nbr_pts*traj_nbr))
+    }
+    fct <- sapply(ind,function(b){
+      func(b, s, x_n_vect, nbr_pts,traj_nbr)
+    })
+    idx <- which(fct[-1]* fct[-length(fct)] < 0)
+    b_est = ind[idx]
+    a_est= (b_est*sum(x_n_vect))/(traj_nbr*T)
+    res <- c(a_est,b_est)
+    return(res)
+  })
+  #Gamma -> moments -> plusieurs traj 
+  paramsGammaMomentsPlusieurstraj <- reactive({
+    df <- data()
+    t <- df[[1]]
+    Y <- df[-1]
+    delta_Y = apply(Y,2,diff)
+    S <- sapply(1:ncol(Y),function(i){
+      sum(delta_Y[,i])
+    })
+    a_estimé = mean(S)^2/(var(S)*T)
+    b_estimé = mean(S)/var(S)
+    return(list(a = a_estimé,b= b_estimé))
+  })
   # ---- Plot CSV + simulations ----
   output$plot3 <- renderPlot({
-    show_data <- !isTRUE(input$takeoff_data)
-    show_gamma_Moments  <- isTRUE(input$show_Gamma_Moments)
-    show_wiener_Vrai <- isTRUE(input$show_Wiener_Vrai)
-    
-    req(show_data || show_gamma_Moments || show_wiener_Vrai)
-    
     df <- data()
     req(df)
     t <- df[[1]]
@@ -551,8 +656,10 @@ server <- function(input, output, session) {
     if(FILE_TYPE == "SEMI_CONDUCTEUR"){
       t <- log(t)
       log_y_col <- log(Y)
-      matplot(t,log_y_col, type = "b",pch = 16)
-      if(input$choix_du_modele == "maximum de vraisemblance"){
+      if(input$choix_du_modele == "pas d'estimation"){
+        matplot(t,log_y_col, type = "b",pch = 16,lty = 1)
+        
+      }else if(input$choix_du_modele == "maximum de vraisemblance"){
         if(input$one_or_more == "1 seul trajectoire"){
           t_ext <- t
           delta_t <- diff(t_ext)
@@ -566,7 +673,7 @@ server <- function(input, output, session) {
           sim_maty= sapply(1:ncol(sim_mat), function(j){
             cumsum(sim_mat[,j])
           })
-          matplot(t_ext, sim_maty,,type = 'b',pch = 16)
+          matplot(t_ext, sim_maty,type = 'b',pch = 16)
         } else{#plusieurs trajectoires
           t_ext <- t
           delta_t <- diff(t_ext)
@@ -575,24 +682,75 @@ server <- function(input, output, session) {
           sigma = p[2]
           sim <- rnorm(length(t_ext), mean = mu*delta_t, sd = sigma*sqrt(delta_t))
           y_sim <- cumsum(sim)
+          matplot(t,log_y_col, type = "b",pch = 16,lty = 1)
           lines(t_ext,y_sim, col = 'gold',type = 'b',pch = 16)
         }
       }else{#moments
-        
-      }
+        if (input$one_or_more == "tous les trajectoires"){
+        t_ext <- t
+        delta_t <- diff(t_ext)
+        p <- paramweinerMomentsplusieurstraj()
+        mu<- p$mu
+        sigma <- p$sigma
+        sim <- rnorm(length(t_ext), mean = mu*delta_t, sd = sigma*sqrt(delta_t))
+        y_sim <- cumsum(sim)
+        matplot(t,log_y_col, type = "b",pch = 16,lty = 1)
+        lines(t_ext,y_sim, col = 'gold',type = 'b',pch = 16,lty = 1)
+        } else{
+          p<-paramsweinerMoments()
+          t_ext <- t
+          mu_vect <- p$mu
+          sigma_vect <- p$sigma
+          sim <- sapply(1:length(mu_vect),function(i){
+            tr<- rnorm(length(t_ext),mean = mu_vect[i]*diff(t_ext),sd = sigma_vect[i]*sqrt(diff(t_ext)))
+            cumsum(tr)
+          })
+          matplot(t_ext,sim,type= "b",pch = 16,lty = 1)
+        }
+        }
       }else{#laser
-        if(input$choix_du_modele == "maximum de vraisemblance"){
-          
-        }else{
-          if(input$show_stats_mom){
-            matplot(df[[1]],df[-1],type="b",pch = 16)
+        t <- df[[1]]
+        Y <- df[-1] 
+        if (input$choix_du_modele == "pas d'estimation"){
+          matplot(t,Y, type = "b",pch = 16, lty = 1)
+        }else if(input$choix_du_modele == "maximum de vraisemblance"){
+          if (input$one_or_more == "tous les trajectoires"){
+            p<- paramsGammaMVplusieurstraj()
+            a<- p[1]
+            b <- p[2]
+            sim <- rgamma(length(t),shape = a*diff(t),rate = b)
+            y_sim <- cumsum(sim)
+            plot(t,y_sim,type = 'b',col= "aquamarine",pch = 16,lty = 1)
+          }else{
+            p<- paramsGammaMV()
+            a_ech <- p$a
+            b_ech <- p$b
+            sim <- sapply(1:length(a_ech),function(i){
+              tr<- rgamma(length(t),shape = a_ech[i]*diff(t)[1],rate = b_ech[i])
+              cumsum(tr)
+            })
+            matplot(t,sim,type= "b",pch = 16,lty = 1)
+          }
+        }else{#moments
+          if (input$one_or_more == "1 seul trajectoire"){
             p<-paramsGammaMoments()
-            cat("Paramètres Gamma — méthode des moments\n")
-            cat("a =\n"); print(p$a)
-            cat("b =\n"); print(p$b)
+            a_ech <- p$a
+            b_ech <- p$b
+            sim <- sapply(1:length(a_ech),function(i){
+              tr<- rgamma(length(t),shape = a_ech[i]*diff(t)[1],rate = b_ech[i])
+              cumsum(tr)
+            })
+            matplot(t,sim,type= "b",pch = 16,lty = 1)
+          }else{
+            p<- paramsGammaMomentsPlusieurstraj()
+            a_est <- p$a
+            b_est <- p$b
+            sim <- rgamma(length(t),shape = a*diff(t),rate = b)
+            y_sim <- cumsum(sim)
+            plot(t,y_sim,type = 'b',col= "purple",pch = 16,lty = 1)
+          }
           }
         }
-    }
     #log_it <- isTRUE(input$log_it)
     #x <- if (log_it) log(df[[1]]) else df[[1]]
     #y_col <- if (log_it) log(df[-1]) else df[-1]
@@ -622,27 +780,12 @@ server <- function(input, output, session) {
       #lines(t_ext, rowMeans(sim_mat), col = "blue", lwd = 3)
       #matlines(t_ext, sim_mat, lty = 2, lwd = 2)
     
-    output$csv_stats <- renderPrint({
-      req(input$show_stats)
-      if (input$choix_du_modele == "moments") {
-        p <- paramsGammaMoments()
-        cat("Paramètres Gamma — méthode des moments\n")
-        cat("a =\n"); print(p$a)
-        cat("b =\n"); print(p$b)
-      } else {
-        p <- paramsGammaMV()
-        cat("Paramètres Gamma — maximum de vraisemblance\n")
-        cat("a =\n"); print(p$a)
-        cat("b =\n"); print(p$b)
-      }
-    })
-    
+
     
     # Ligne horizontale seuil
     seuil <- input$seuil
     abline(h = seuil, col = "red", lwd = 2)
   })
-  
   # ============================================================
   # PAGE 4 : Processus Weiner avec maintenance imparfaite
   # ============================================================  

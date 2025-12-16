@@ -5,6 +5,17 @@ n = length(x)
 m = length(df[-1])
 mu_vect = numeric(m)
 sigma_vect = numeric(m)
+t = df[[1]]
+log_t = log(t)
+Y = log(df[-1])
+n = length(t)
+delta_t = diff(log_t)
+delta_X = apply(Y,2,diff)
+s <- sapply(1:ncol(Y),function(i){
+  sum(delta_X[,i])
+})
+mu <- mean(s)/sum(delta_t)
+sigma <- sqrt(var(s)/sum(delta_t))
 Y = log(df[-1])
 for(i in 1:length(df[-1])){
   y_col <- log(df[-1][,i])
