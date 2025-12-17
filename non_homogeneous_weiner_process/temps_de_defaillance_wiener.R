@@ -11,7 +11,7 @@ plot(x = times,times,type="n")
 abline(a= w, b=0)
 time_to_failure = numeric(length = length(number_of_paths))
 for (i in 1:number_of_paths){
-  X_i<- cumsum(rnorm(n, mean = 0, sd = sqrt(delta)))   # scaled BM
+  X_i<- cumsum(rnorm(n, mean = 0, sd = sqrt(delta)))   # simulation du processus de Wiener
   path <- a_true * times^b_true + sigma_B * X_i
   failure_time = times[path>= w][1]
   if (is.na(failure_time)){
