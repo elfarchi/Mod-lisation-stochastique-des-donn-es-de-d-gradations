@@ -1,0 +1,63 @@
+```{r}
+a_true     <- 2
+b_true     <- 1.5
+sigma_true <- 60
+
+```
+
+```{r}
+set.seed(123)
+
+N  <- 5000        # nombres de trajectoires
+T  <- 1000
+nT <- 5000        # nombre de points dans le temps
+
+t  <- seq(20, T, length.out = nT)
+t
+dt <- diff(t)
+
+# drift
+mu <- a_true * t^b_true
+
+# simulation des trajectoires
+X <- matrix(0, nrow = N, ncol = nT)
+
+for (i in 1:N) {
+  W <- c(0, cumsum(rnorm(nT - 1, sd = sqrt(dt))))
+  X[i, ] <- mu + sigma_true * W
+}
+
+```
+
+```{r}
+# estimation de la moyenne empirique 
+m_hat <- colMeans(X)
+
+```
+
+```{r}
+# plot de la moyenne empirique et de la vraie moyenne
+plot(t, m_hat, type = "l", lwd = 2,
+     ylab = "Mean degradation",
+     xlab = "Time")
+lines(t, mu, col = "red", lwd = 2)
+legend("topleft", legend = c("Mean of paths", "True a t^b"),
+       col = c("black", "red"), lwd = 2)
+
+```
+
+```{r}
+# estimation initiale des paramètres a et b par régression linéaire sur les log-logs
+eps <- 0.05 * max(t)   # on ignore les petites valeurs de t pour éviter les problèmes de log(0)
+idx <- t > eps
+
+fit_init <- lm(log(m_hat[idx]) ~ log(t[idx]))
+
+start_vals <- list(
+  a = exp(coef(fit_init)[1]),
+  b = coef(fit_init)[2]
+)
+start_vals
+
+
+```

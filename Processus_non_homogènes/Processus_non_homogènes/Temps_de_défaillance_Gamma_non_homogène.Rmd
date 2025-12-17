@@ -1,0 +1,36 @@
+---
+title: "Temps de défaillance gamma"
+output: html_document
+---
+
+```{r}
+nombre_de_courbes = 5
+t = seq(0,40,length.out = 80) #l'intervalle de temps
+#les paramètres du modèle
+a=1
+b=5 
+c=1.3
+w = 200 # le seuil
+dt = dt <- t[-1]^c - t[-length(t)]^c 
+dX = rgamma(n = length(dt),shape = a * dt,scale = b) #les accroissements
+X = c(0,cumsum(dX)) #le processus
+plot(t,X,"l")
+for (i in (2:nombre_de_courbes)){
+  dx = rgamma(n = length(dt),shape = a * dt,scale = b)
+  x = c(0,cumsum(dx))
+  lines(t,x)
+  
+}
+abline(a=w,b=0,col="red")
+```
+
+```{r}
+nb_trajectoires = 50000
+failure_time = numeric(nb_trajectoires)
+for (i in (1:nb_trajectoires)){
+  dx = rgamma(n = length(dt),shape = a * dt,scale = b)
+  x = c(0,cumsum(dx))
+  failure_time[i]= t[x>w][1]
+}
+hist(failure_time,probability = TRUE)
+```
