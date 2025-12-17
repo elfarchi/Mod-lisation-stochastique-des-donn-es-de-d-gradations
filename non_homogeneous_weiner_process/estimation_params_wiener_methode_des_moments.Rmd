@@ -8,18 +8,18 @@ sigma_true <- 60
 ```{r}
 set.seed(123)
 
-N  <- 5000        # number of paths
+N  <- 5000        # nombres de trajectoires
 T  <- 1000
-nT <- 5000        # time points
+nT <- 5000        # nombre de points dans le temps
 
 t  <- seq(20, T, length.out = nT)
 t
 dt <- diff(t)
 
-# Drift
+# drift
 mu <- a_true * t^b_true
 
-# Simulate Brownian paths
+# simulation des trajectoires
 X <- matrix(0, nrow = N, ncol = nT)
 
 for (i in 1:N) {
@@ -30,11 +30,13 @@ for (i in 1:N) {
 ```
 
 ```{r}
+# estimation de la moyenne empirique 
 m_hat <- colMeans(X)
 
 ```
 
 ```{r}
+# plot de la moyenne empirique et de la vraie moyenne
 plot(t, m_hat, type = "l", lwd = 2,
      ylab = "Mean degradation",
      xlab = "Time")
@@ -45,8 +47,8 @@ legend("topleft", legend = c("Mean of paths", "True a t^b"),
 ```
 
 ```{r}
-
-eps <- 0.05 * max(t)   # remove first 5% of time range
+# estimation initiale des paramètres a et b par régression linéaire sur les log-logs
+eps <- 0.05 * max(t)   # on ignore les petites valeurs de t pour éviter les problèmes de log(0)
 idx <- t > eps
 
 fit_init <- lm(log(m_hat[idx]) ~ log(t[idx]))
