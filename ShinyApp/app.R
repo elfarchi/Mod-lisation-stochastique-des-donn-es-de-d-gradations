@@ -30,16 +30,15 @@ ui <- page_navbar(
       
       #TAB 2 : Moyenne 
       tabPanel(
-        "simulation par max_de_vraisemblance",
+        "simulation par max de vraisemblance et moments",
         
         sidebarLayout(
           sidebarPanel(
             numericInput("pt_nbr_2", "Nombre points :", 1000),
             numericInput("moyenne_2", "Moyenne :", 10),
-            numericInput("variance_2", "Variance :", 10),
+            numericInput("variance_2", "Variance :", 15),
             numericInput("traj_nbr_2", "Nb trajectoires :", 500),
-            numericInput("T_2","Durée_2",100),
-            numericInput("seuil_2", "Seuil :", 1),
+            numericInput("T_2","Durée",10),
             checkboxInput("biais_1","Biais des estimateurs par méthode des moments "),
             verbatimTextOutput("biais_txt_1"),
             checkboxInput("biais_4","Biais des estimateurs par méthode des MV"),
@@ -53,7 +52,7 @@ ui <- page_navbar(
       
       #TAB 3 : Distribution
       tabPanel(
-        "Distribution finale",
+        "Etude des dates de défaillances",
         sidebarLayout(
           sidebarPanel(
             numericInput("pt_nbr_3", "Nombre points :", 100),
@@ -96,7 +95,7 @@ ui <- page_navbar(
       
       # TAB 2 : Moyenne 
       tabPanel(
-        "simulation par max_de_vraisemblance et moments",
+        "simulation par max de vraisemblance et moments",
         
         sidebarLayout(
           sidebarPanel(
@@ -118,7 +117,7 @@ ui <- page_navbar(
       
       # TAB 3 : Distribution
       tabPanel(
-        "Distribution finale",
+        "Etude des dates de défaillances",
         sidebarLayout(
           sidebarPanel(
             selectInput(inputId = "Modele_rep",
@@ -134,7 +133,7 @@ ui <- page_navbar(
             verbatimTextOutput("median_text"),
             numericInput("maint_eff","date de maintenance effective", 0.95),
             verbatimTextOutput("maint_txt"),
-            numericInput("Prob_surv","probabilité de survie",30)
+            numericInput("prob_surv","probabilité de survie",30),
             verbatimTextOutput("prob_text")
           ),
           mainPanel(
@@ -147,18 +146,16 @@ ui <- page_navbar(
   
   # ---- PAGE 3 : Analyse d'un CSV ----
   nav_panel(
-    "CSV plot",
-    page_sidebar(
-      sidebar = sidebar(
+    "Analyse des données",
+    sidebarLayout(
+      sidebarPanel(
         fileInput("file", "Upload CSV File", accept = ".csv"),
         selectInput(
           inputId = "choix_du_modele",
           label = "Le choix du modele d'estimation",
           choices = c("pas d'estimation","maximum de vraisemblance", "moments")
         ),
-        checkboxInput("log_it", "Log the dataset"),
-        checkboxInput("takeoff_data", "Enlever les courbes reelles"),
-        numericInput("seuil", "Seuil horizontal :", value = 10),
+        numericInput("seuil", "Seuil horizontal :", value = 0),
         verbatimTextOutput("csv_stats"), #Affichage statistiques
         conditionalPanel(
           condition = "input.choix_du_modele == 'maximum de vraisemblance'",
@@ -167,7 +164,11 @@ ui <- page_navbar(
             inputId = "one_or_more",
             label = "nombre de trajectoires",
             choices = c("1 seul trajectoire", "tous les trajectoires")
-          )
+          ),
+          checkboxInput("list_t","afficher liste du temps de défaillance"),
+          verbatimTextOutput("list_ttxt"),
+          numericInput("survie_prob","Probabilité de survie",10),
+          verbatimTextOutput("survie_txt")
         ),
         conditionalPanel(
           condition = "input.choix_du_modele == 'moments'",
@@ -304,23 +305,24 @@ server <- function(input, output, session) {
     delta_x <-apply(results,2,diff)
     delta_t = diff(t)
     d_tmat = matrix(delta_t, nrow = L-1, ncol = traj_nbr)
-    mu_estimé <- sum(delta_x)/((t[L]-t[1])*traj_nbr)
-    sigma_estimé <- sqrt(1/(L*traj_nbr)*sum(((delta_x-mu_estimé*d_tmat)^2)/d_tmat))
+    mu_estimé <- round(sum(delta_x)/((t[L]-t[1])*traj_nbr),4)
+    sigma_estimé <-round( sqrt(1/(L*traj_nbr)*sum(((delta_x-mu_estimé*d_tmat)^2)/d_tmat)),4)
     res <- c(mu_estimé,sigma_estimé)
     #moments à plusieurs trajectoires
     S <- sapply(1:traj_nbr,function(i){
       sum(delta_x[,i])
     })
-    mu_est <- mean(S)/sum(delta_t)
+    mu_est <- round(mean(S)/sum(delta_t),4)
     Y = S/sqrt(T)
-    sigma_est <- sqrt(
-      mean((delta_x - mu_est * d_tmat)^2 / d_tmat)
-    )
+    sigma_est <- round(sqrt(
+      mean((delta_x - mu_est * d_tmat)^2 / d_tmat)),4)
     sim_1 <- simulateWiener(N,L,res[1],res[2],T)
     B <- (sim_1-res[1]*t)/res[2]
-    plot(t,sim_1,type = 'l', col ="darkgreen")
+    plot(t,sim_1,type = 'l', col ="darkgreen",
+         main = "Simulation des trajectoires par méthodes de Maximum de vraisemblance et de moments",
+         xlab = "temps",ylab= "Dégradation prédite")
     lines(t,simulateWiener(N,L,mu_est,sigma_est,T),type = 'l', col ="hotpink")
-    legend("topleft", col = c("darkgreen","hotpink"), lty = 1, cex = .8,
+    legend("topleft", col = c("darkgreen","hotpink"), lty = 1,lwd = 2,cex = 1.2,
            legend = c(paste0("MV : mu = ",mu_estimé,", sigma = ",sigma_estimé),
                       paste0("Moments : mu  = ",mu_est,", sigma = ", sigma_est)))
   })
@@ -525,7 +527,7 @@ server <- function(input, output, session) {
       delta_t <- diff(t)
       L <- input$pt_nbr_5
       traj_nbr <- input$traj_nbr_5
-      ind <- seq(1, 2000000, length.out = 50000)
+      ind <- seq(1, 2000, length.out = 5000)
       x_n_vect <- results[nrow(results),]
       
       s_vect <- sapply(1:traj_nbr, function(i) {
@@ -586,6 +588,24 @@ server <- function(input, output, session) {
            xlab = "Temps",
            ylab = "S(t) = P(T > t)")
     }
+    output$median_text <-renderText({
+      req(input$median)
+      t_deff <- temps_défaillance()
+      req(t_deff)
+      round(mean(t_deff),3)
+    })
+    output$maint_txt <- renderText({
+      req(input$maint_eff)
+      t_deff <- temps_défaillance()
+      req(t_deff)
+      paste0("date de maintenance effective à risque ", input$maint_eff," : ",round(quantile(t_deff,input$maint_eff),5))
+    })
+    output$prob_text <- renderText({
+      req(input$prob_surv)
+      t_deff <- temps_défaillance()
+      req(t_deff)
+      round(mean(t_deff >=input$prob_surv),4)
+    })
     
   })
   # ============================================================
@@ -622,9 +642,14 @@ server <- function(input, output, session) {
     s <- sapply(1:ncol(Y),function(i){
       sum(delta_X[,i])
     })
-    mu <- mean(s/sum_delta_t)
-    sigma <- sqrt(var(s)/sum(delta_t))
-    return (list(mu = mu, sigma = sigma))
+    mu_global <- mean(s/sum_delta_t)
+    sigma_global <- sqrt(var(s)/sum(delta_t))
+    #dt <- diff(log_t); dt <- dt[1]
+    #dX_all <- as.vector(apply(Y, 2, diff))
+    
+    #mu_global <- mean(dX_all/sum(dt))
+    #sigma_global <- sqrt(var(dX_all)/sum(dt))
+    return (list(mu = mu_global, sigma = sigma_global))
   })
   #   Gamma -> Moments -> 1 trajectoire
   paramsGammaMoments <- reactive({
@@ -798,32 +823,44 @@ server <- function(input, output, session) {
     res <- c(a_est,b_est)
     return(res)
   })
-  #Gamma -> moments -> plusieurs traj 
+  #Gamma -> moments -> plusieurs traj (pooled)
   paramsGammaMomentsPlusieurstraj <- reactive({
     df <- data()
+    #t <- df[[1]]
+    #Y <- df[-1]
+    #sum_delta_t <- sum(diff(t))
+    #delta_Y = apply(Y,2,diff)
+    #S <- sapply(1:ncol(Y),function(i){
+    #  sum(delta_Y[,i])
+    #})
+    #a_estimé = mean(S)^2/(var(S)*sum_delta_t)
+    #b_estimé = mean(S)/var(S)
     t <- df[[1]]
     Y <- df[-1]
-    sum_delta_t <- sum(diff(t))
-    delta_Y = apply(Y,2,diff)
-    S <- sapply(1:ncol(Y),function(i){
-      sum(delta_Y[,i])
-    })
-    a_estimé = mean(S)^2/(var(S)*sum_delta_t)
-    b_estimé = mean(S)/var(S)
-    return(list(a = a_estimé,b= b_estimé))
+    dt <- diff(t); dt <- dt[1]
+    dX_all <- as.vector(apply(Y, 2, diff))
+    
+    b_global <- mean(dX_all) / var(dX_all)
+    a_global <- mean(dX_all)^2 / (var(dX_all) * dt)
+    a_global; b_global
+    return(list(a = a_global,b= b_global))
   })
   # ---- Plot CSV + simulations ----
+  hey_reactive <- reactiveVal(NULL)
+  hey_reactive_2 <- reactiveVal(NULL)
   output$plot3 <- renderPlot({
     df <- data()
     req(df)
     t <- df[[1]]
     Y <- df[-1] 
+    seuil <- input$seuil
     FILE_TYPE = FILE()
     if(FILE_TYPE == "SEMI_CONDUCTEUR"){
       t <- log(t)
       log_y_col <- log(Y)
       if(input$choix_du_modele == "pas d'estimation"){
-        matplot(t,log_y_col, type = "b",pch = 16,lty = 1)
+        matplot(t,log_y_col, type = "b",pch = 16,lty = 1,main ="trajectoires réelles de dégradations des semi_conducteurs (en échelle logarithmique)",
+                xlab = "log(temps)",ylab = "log(Dégradation)")
         
       }else if(input$choix_du_modele == "maximum de vraisemblance"){
         if(input$one_or_more == "1 seul trajectoire"){
@@ -839,7 +876,35 @@ server <- function(input, output, session) {
           sim_maty= sapply(1:ncol(sim_mat), function(j){
             cumsum(sim_mat[,j])
           })
-          matplot(t_ext, sim_maty,type = 'b',pch = 16)
+          x_nvect = sim_maty[nrow(sim_maty),]
+          BOOL <- x_nvect>= seuil
+          while (FALSE %in% BOOL) {
+            sim_again <- sapply(1:length(mu), function(i) {
+              rnorm(length(delta_t),
+                    mean = mu[i] * delta_t,
+                    sd   = sigma[i] * sqrt(delta_t))
+            })
+            simy <- apply(sim_again, 2, cumsum)
+            last_val <- sim_maty[nrow(sim_maty), ]
+            for (j in 1:ncol(simy)) {
+              simy[, j] <- simy[, j] + last_val[j]
+            }
+            sim_maty <- rbind(sim_maty, simy)
+            x_nvect <- sim_maty[nrow(sim_maty), ]
+            BOOL <- x_nvect >= seuil
+          }
+          dt <- mean(delta_t)
+          t_full <- seq(from = t_ext[1],
+                        by = dt,
+                        length.out = nrow(sim_maty))
+          listie_bestie <- sapply(1:length(mu),function(i){
+            round(t_full[which(sim_maty[,i]>= seuil)[1]],3)
+          })
+          hey_reactive(listie_bestie)
+          matplot(t_full, sim_maty,type = 'b',pch = 16,lty= 1,main ="Trajectoires simulées par le processus de Weiner (en échelle logarithmique)",
+                  xlab = "log(temps)",ylab= "log(Dégradation)")
+          if (seuil > 0){
+          abline(h = seuil, col = "red", lwd = 2,lty = 4)}
         } else{#plusieurs trajectoires
           t_ext <- t
           delta_t <- diff(t_ext)
@@ -848,8 +913,13 @@ server <- function(input, output, session) {
           sigma = p[2]
           sim <- rnorm(length(t_ext), mean = mu*delta_t, sd = sigma*sqrt(delta_t))
           y_sim <- cumsum(sim)
-          matplot(t,log_y_col, type = "b",pch = 16,lty = 1)
-          lines(t_ext,y_sim, col = 'gold',type = 'b',pch = 16)
+          matplot(t,log_y_col, type = "b",pch = 16,lty = 1,main ="Trajectoires réelles de dégradations (en échelle logarithmique)",
+                  xlab = "log(temps)",ylab= "log(Dégradation)")
+          lines(t_ext,y_sim, col = 'gold2',type = 'b',pch = 16)
+          legend("topleft",col = c("black","red","gold2"),lty = 1,lwd = 2,cex = 1.1,
+                 legend = (c(paste0("paramètre de tendance (drift) estimé = ",round(mu,3))
+                                    ,paste0("paramètre de variabilité estimé = ",round(sigma^2,3)),
+                             "trajectoire prédite par le processus de Weiner à plusieurs trajectoires")))
         }
       }else{#moments
         if (input$one_or_more == "tous les trajectoires"){
@@ -860,8 +930,13 @@ server <- function(input, output, session) {
         sigma <- p$sigma
         sim <- rnorm(length(t_ext), mean = mu*delta_t, sd = sigma*sqrt(delta_t))
         y_sim <- cumsum(sim)
-        matplot(t,log_y_col, type = "b",pch = 16,lty = 1)
-        lines(t_ext,y_sim, col = 'gold',type = 'b',pch = 16,lty = 1)
+        matplot(t,log_y_col, type = "b",pch = 16,lty = 1,main ="Trajectoires réelles de dégradations (en échelle logarithmique)",
+                xlab = "log(temps)",ylab= "log(Dégradation)")
+        lines(t_ext,y_sim, col = 'gold2',type = 'b',pch = 16,lty = 1)
+        legend("topleft",col = c("black","red","gold2"),lty = 1,lwd = 2,cex = 1.1,
+               legend = (c(paste0("paramètre de tendance (drift) estimé = ",round(mu,3))
+                           ,paste0("paramètre de variabilité estimé = ",round(sigma^2,3)),
+                           "trajectoire prédite par le processus de Weiner à plusieurs trajectoires")))
         } else{
           p<-paramsweinerMoments()
           t_ext <- t
@@ -871,7 +946,8 @@ server <- function(input, output, session) {
             tr<- rnorm(length(t_ext),mean = mu_vect[i]*diff(t_ext),sd = sigma_vect[i]*sqrt(diff(t_ext)))
             cumsum(tr)
           })
-          matplot(t_ext,sim,type= "b",pch = 16,lty = 1)
+          matplot(t_ext,sim,type= "b",pch = 16,lty = 1,main ="Trajectoires simulées par le processus de Weiner (en échelle logarithmique)",
+                  xlab = "log(temps)",ylab= "log(Dégradation)")
         }
         }
       }else{#laser
@@ -881,21 +957,66 @@ server <- function(input, output, session) {
           matplot(t,Y, type = "b",pch = 16, lty = 1)
         }else if(input$choix_du_modele == "maximum de vraisemblance"){
           if (input$one_or_more == "tous les trajectoires"){
+            Y <- df[-1]
             p<- paramsGammaMVplusieurstraj()
             a<- p[1]
             b <- p[2]
             sim <- rgamma(length(t),shape = a*diff(t),rate = b)
             y_sim <- cumsum(sim)
-            plot(t,y_sim,type = 'b',col= "aquamarine",pch = 16,lty = 1)
+            matplot(t,Y, type = "b",pch = 16, lty = 1)
+            lines(t,y_sim,type = 'l',col= "red",lwd = 5,lty  =4)
+            legend("topleft",col = c("brown","red"),lty = 1,lwd = 2,cex = 1.1,
+                   legend = (c(paste0("taux estimé = ",round(a,3))
+                               ,paste0("forme estimé = ",round(b,3)))))
+            
           }else{
-            p<- paramsGammaMV()
+            seuil <- input$seuil
+            p <- paramsGammaMV()
             a_ech <- p$a
             b_ech <- p$b
-            sim <- sapply(1:length(a_ech),function(i){
-              tr<- rgamma(length(t),shape = a_ech[i]*diff(t)[1],rate = b_ech[i])
-              cumsum(tr)
+            n_traj <- length(a_ech)
+            delta_t <- diff(t)
+            dt <- mean(delta_t)
+            sim_mat <- sapply(1:n_traj, function(i) {
+              rgamma(length(delta_t),
+                     shape = a_ech[i] * delta_t,
+                     rate  = b_ech[i])
             })
-            matplot(t,sim,type= "b",pch = 16,lty = 1)
+            sim_maty <- apply(sim_mat, 2, cumsum)
+            x_nvect <- sim_maty[nrow(sim_maty), ]
+            BOOL <- x_nvect >= seuil
+            iter <- 0
+            
+            while (any(!BOOL)) {
+              
+              sim_again <- sapply(1:n_traj, function(i) {
+                rgamma(length(delta_t),
+                       shape = a_ech[i] * delta_t,
+                       rate  = b_ech[i])
+              })
+              
+              simy <- apply(sim_again, 2, cumsum)
+              last_val <- sim_maty[nrow(sim_maty), ]
+              for (j in 1:ncol(simy)) {
+                simy[, j] <- simy[, j] + last_val[j]
+              }
+              sim_maty <- rbind(sim_maty, simy)
+              x_nvect <- sim_maty[nrow(sim_maty), ]
+              BOOL <- x_nvect >= seuil
+            }
+            t_full <- seq(from = t[1],
+                          by   = dt,
+                          length.out = nrow(sim_maty))
+            listie_bestie <- sapply(1:n_traj, function(i) {
+              idx <- which(sim_maty[, i] >= seuil)[1]
+              t_full[idx]
+            })
+            hey_reactive(listie_bestie)
+            matplot(t_full,sim_maty,type= "b",pch = 16,lty = 1,main ="trace des trajectoires simulées par le processus Gamma",
+                    xlab = "temps",ylab = "Dégradation")
+            if (seuil > 0) {
+              abline(h = seuil, col = "red", lwd = 2,lty = 4)
+            }
           }
         }else{#moments
           if (input$one_or_more == "1 seul trajectoire"){
@@ -908,12 +1029,17 @@ server <- function(input, output, session) {
             })
             matplot(t,sim,type= "b",pch = 16,lty = 1)
           }else{
+            Y <- df[-1]
             p<- paramsGammaMomentsPlusieurstraj()
             a_est <- p$a
             b_est <- p$b
-            sim <- rgamma(length(t),shape = a*diff(t),rate = b)
+            sim <- rgamma(length(t),shape = a_est*diff(t),rate = b_est)
             y_sim <- cumsum(sim)
-            plot(t,y_sim,type = 'b',col= "purple",pch = 16,lty = 1)
+            matplot(t,Y, type = "b",pch = 16, lty = 1)
+            lines(t,y_sim,type = 'l',col= "purple",lwd = 5)
+            legend("topleft",col = c("brown","red"),lty = 1,lwd = 2,cex = 1.1,
+                   legend = (c(paste0("taux estimé = ",round(a_est,3))
+                               ,paste0("forme estimé = ",round(b_est,3)))))
           }
           }
         }
@@ -949,8 +1075,25 @@ server <- function(input, output, session) {
 
     
     # Ligne horizontale seuil
-    seuil <- input$seuil
-    abline(h = seuil, col = "red", lwd = 2)
+
+  })
+  output$list_ttxt <- renderText({
+    req(input$list_t)
+    list <- hey_reactive()
+    req(list)
+    paste0(list)
+  }) 
+  output$survie_txt <- renderText({
+    req(input$survie_prob)
+    list<- hey_reactive()
+    req(list)
+    round(mean(list >=input$survie_prob),4)
+  })
+  output$list_ttxt_2 <- renderText({
+    req(input$list_t_2)
+    list <- hey_reactive()
+    req(list)
+    paste0(list)
   })
   # ============================================================
   # PAGE 4 : Processus Weiner avec maintenance imparfaite
