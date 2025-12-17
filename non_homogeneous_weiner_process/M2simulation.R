@@ -1,9 +1,9 @@
 b_true   <- 1.91
 a_true  <-  1.25
-sigma_B  <- 650        # diffusion coefficient
-w        <- 71500    # failure threshold (mm)
-t_max    <- 400    # last measurement time (months)
-delta    <- 0.2        # sampling interval (months)
+sigma_B  <- 650        # coefficient de diffusion
+w        <- 71500    # seuil  de franchissement
+t_max    <- 400    # dernière date de mesure 
+delta    <- 0.2        # lapse de temps entre les mesures
 times    <- seq(0, t_max, by = delta)
 n        <- length(times)
 number_of_paths = 1000
@@ -25,11 +25,11 @@ for (i in 1:number_of_paths){
 
 
 hist(time_to_failure,
-     breaks = 40,            
+     breaks = 35,            
      col = "skyblue",
      border = "white",
-     main = "Histogram of Time to Failure",
-     xlab = "Time to Failure",
+     main = "Histogramme des temps de defaillance",
+     xlab = "temps de defaillance",
      probability = TRUE)    
 
 
@@ -48,3 +48,9 @@ tgrid <- seq(min(time_to_failure), max(time_to_failure), length.out = 500)
 
 
 lines(tgrid, fM2(tgrid, a_true, b_true, w, sigma_B), col = "violet", lwd = 2)
+# Ajouter une légende
+legend("topright", 
+       legend = c("approximation de la densité théorique"), 
+       col = "violet", 
+       lwd = 2, 
+       cex = 0.9)
