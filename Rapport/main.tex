@@ -596,7 +596,7 @@ Les espérances intervenant dans la fonction de coût n'admettant pas d'expressi
 
 \subsection{Résultats numériques et interprétation}
 
-La figure~\ref{fig:Recherche_Seuil_Optimal} présente l’évolution du coût moyen $J(h)$ en fonction du seuil de maintenance $h$ pour différentes valeurs du rapport de coûts $C_f/C_m$. Les espérances intervenant dans la définition de $J(h)$ sont estimées par simulation Monte Carlo, avec $1000$ trajectoires pour chaque valeur de $h$ et un taux de complétion supérieur à $98\%$ dans tous les cas.
+La figure~\ref{fig:Recherche_Seuil_Optimal} présente l’évolution du coût moyen $J(h)$ en fonction du seuil de maintenance $h$ pour différentes valeurs du rapport de coûts $C_f/C_m$. Les espérances intervenant dans la définition de $J(h)$ sont estimées par simulation Monte Carlo, avec $1000$ trajectoires pour chaque valeur de $h$ et un taux de complétion (ie atteinte de la défaillance avant le nombre maximal d'itérations permises) supérieur à $98\%$ dans tous les cas.
 
 Les résultats montrent l’existence d’un seuil optimal $h^*$ minimisant le coût moyen, confirmant la pertinence d’une politique de maintenance à seuil dans le cadre d’un processus de Wiener avec maintenance imparfaite par réduction de l’état. Lorsque le rapport $C_f/C_m$ augmente, le seuil optimal $h^*$ décroît globalement : la maintenance devient plus préventive afin de réduire le risque de défaillance coûteuse. À l’inverse, lorsque le coût de maintenance est dominant, l’intervention est retardée, conduisant à des valeurs plus élevées de $h^*$.
 
