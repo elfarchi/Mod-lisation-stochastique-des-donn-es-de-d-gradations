@@ -5,7 +5,7 @@ library(statmod)
 ui <- page_navbar(
   title = "Étude des modèles de dégradation",
   
-  # ---- PAGE 1 : Processus de Wiener ----
+  # PAGE 1 : Processus de Wiener
   nav_panel(
     "Processus Wiener",
     
@@ -15,10 +15,10 @@ ui <- page_navbar(
         "Trajectoires",
         page_sidebar(
           sidebar = sidebar(
-            numericInput("pt_nbr_1", "Nombre points :", 100),
-            numericInput("moyenne_1", "Moyenne :", 10),
-            numericInput("variance_1", "Variance :", 10),
-            numericInput("traj_nbr_1", "Nb trajectoires :", 7),
+            numericInput("pt_nbr_1", "Nombre points :", 1000),
+            numericInput("moyenne_1", "Drift :", 8),
+            numericInput("variance_1", "Variabilité :", 10),
+            numericInput("traj_nbr_1", "Nb trajectoires :", 1),
             numericInput("T_1","Durée",10),
             actionButton("run_weiner_sim","Exécuter" , class = "btn-primary")
           ),
@@ -35,10 +35,10 @@ ui <- page_navbar(
         sidebarLayout(
           sidebarPanel(
             numericInput("pt_nbr_2", "Nombre points :", 1000),
-            numericInput("moyenne_2", "Moyenne :", 10),
-            numericInput("variance_2", "Variance :", 15),
-            numericInput("traj_nbr_2", "Nb trajectoires :", 500),
-            numericInput("T_2","Durée",100),
+            numericInput("moyenne_2", "Drift :", 0.484),
+            numericInput("variance_2", "Variabilité :", 0.2905*2),
+            numericInput("traj_nbr_2", "Nb trajectoires :", 100),
+            numericInput("T_2","Durée",15),
             checkboxInput("biais_1","Biais des estimateurs par méthode des moments "),
             verbatimTextOutput("biais_txt_1"),
             checkboxInput("biais_4","Biais des estimateurs par méthode des MV"),
@@ -50,30 +50,12 @@ ui <- page_navbar(
           )
         )
       ),
-      
-      #TAB 3 : Distribution
-      tabPanel(
-        "Etude des dates de défaillances",
-        sidebarLayout(
-          sidebarPanel(
-            numericInput("pt_nbr_3", "Nombre points :", 100),
-            numericInput("moyenne_3", "Moyenne :", 8),
-            numericInput("variance_3", "Variance :", 25),
-            numericInput("traj_nbr_3", "Nb trajectoires :", 1000),
-            numericInput("T_3","Durée",500),
-            numericInput("seuil_3", "Seuil :", 80),
-            actionButton("run_weiner_défaillance","Exécuter",class = "btn-primary")
-          ),
-          mainPanel(
-            plotOutput("plot1_hist",height = "800px")
-          )
-        )
-      )
+
     )
   ),
   
   
-  # ---- PAGE 2 : Processus Gamma ----
+  # PAGE 2 : Processus Gamma 
   nav_panel(
     "Processus Gamma",
     
@@ -83,10 +65,10 @@ ui <- page_navbar(
         "Trajectoires",
         page_sidebar(
           sidebar = sidebar(
-            numericInput("pt_nbr_4", "Nombre points :", 100),
-            numericInput("forme_4", "Forme :", 10),
+            numericInput("pt_nbr_4", "Nombre points :", 1000),
+            numericInput("forme_4", "Forme :", 8),
             numericInput("taux_4", "Taux :", 10),
-            numericInput("traj_nbr_4", "Nb trajectoires :", 7),
+            numericInput("traj_nbr_4", "Nb trajectoires :", 1),
             numericInput("T_4","Durée",10),
             actionButton("run_sim_gamma","Exécuter",class = "btn-primary")
           ),
@@ -118,38 +100,11 @@ ui <- page_navbar(
           )
         )
       ),
-      
-      # TAB 3 : Distribution
-      tabPanel(
-        "Etude des dates de défaillances",
-        sidebarLayout(
-          sidebarPanel(
-            selectInput(inputId = "Modele_rep",
-                        label = "Modèle de représentation choisi",
-                        choices = c("histogramme de date de défaillance","fonction de survie")),
-            numericInput("pt_nbr_6", "Nombre points :", 100),
-            numericInput("forme_6", "Forme :", 10),
-            numericInput("taux_6", "Taux :", 8),
-            numericInput("traj_nbr_6", "Nb trajectoires :", 700),
-            numericInput("T_6","Durée",90),
-            numericInput("seuil_6", "Seuil :", 70),
-            checkboxInput("median","moyenne des temps de défaillance"),
-            verbatimTextOutput("median_text"),
-            actionButton("run_gamma_défaillance","Exécuter",class = "btn-primary"),
-            numericInput("maint_eff","date de maintenance effective", 0.95),
-            verbatimTextOutput("maint_txt"),
-            numericInput("prob_surv","probabilité de survie",30),
-            verbatimTextOutput("prob_text")
-          ),
-          mainPanel(
-            plotOutput("plot2_hist",height = "800px")
-          )
-        )
-      )
+  
     )
   ),
   
-  # ---- PAGE 3 : Analyse d'un CSV ----
+  # PAGE 3 : Analyse d'un CSV
   nav_panel(
     "Analyse des données",
     sidebarLayout(
@@ -172,8 +127,6 @@ ui <- page_navbar(
           verbatimTextOutput("list_ttxt_2"),
           checkboxInput("list_t_1","afficher liste du temps de défaillance pour les semi-conducteurs"),
           verbatimTextOutput("list_ttxt_1"),
-          numericInput("survie_prob","Probabilité de survie",10),
-          verbatimTextOutput("survie_txt"),
         ),
         conditionalPanel(
           condition = "input.choix_du_modele == 'moments'",
@@ -208,16 +161,11 @@ ui <- page_navbar(
   )
   
     )
-# -------------------------------
-# SERVEUR
-# -------------------------------
+
 server <- function(input, output, session) {
+
+# PAGE 1 : Simulation du processus de Wiener
   
-  # ============================================================
-  # PAGE 1 : Simulation du processus de Wiener
-  # ============================================================
-  
-  # Fonction qui simule une trajectoire de Wiener (décomposition KL)
   simulateWiener = function(N, L, mu, sigma, T) {
     
     Z_k <- rnorm(N)
@@ -237,7 +185,6 @@ server <- function(input, output, session) {
     mu * t + sigma * B
   }
   
-  # --- Plot du Wiener ---
   output$plot1 <- renderPlot({
     req(input$run_weiner_sim)
     mu = isolate(input$moyenne_1)
@@ -246,16 +193,6 @@ server <- function(input, output, session) {
     L = isolate(input$pt_nbr_1)
     T = isolate(input$T_1)
     N=1000
-    
-    # Construction de l'échelle temporelle
-    #if (model == "Constant") {
-    #  t = seq(0,T,length.out = L)
-    #} else {
-    #  delta_t = runif(L - 1)
-    #  t = numeric(L)
-     # t[1] = 0
-    #  for (i in 2:L) t[i] = t[i - 1] + delta_t[i - 1]
-    #}
     t = seq(0,T,length.out = L)
     # Cas une seule trajectoire
     if (traj_nbr == 1){
@@ -284,6 +221,7 @@ server <- function(input, output, session) {
     T = isolate(input$T_2)
     
     #max de vraisemblance à plusieurs trajectoires
+    
     results = replicate(traj_nbr, simulateWiener(N, L, mu, sigma, T))
     results_store(results)
     t <- seq(0, T, length.out = L)
@@ -293,7 +231,9 @@ server <- function(input, output, session) {
     mu_estimé <- round(sum(delta_x)/((t[L]-t[1])*traj_nbr),4)
     sigma_estimé <-round( sqrt(1/(L*traj_nbr)*sum(((delta_x-mu_estimé*d_tmat)^2)/d_tmat)),4)
     res <- c(mu_estimé,sigma_estimé)
+    
     #moments à plusieurs trajectoires
+    
     S <- sapply(1:traj_nbr,function(i){
       sum(delta_x[,i])
     })
@@ -312,6 +252,7 @@ server <- function(input, output, session) {
            legend = c(paste0("MV : mu = ",mu_estimé,", sigma = ",sigma_estimé),
                       paste0("Moments : mu  = ",mu_est,", sigma = ", sigma_est)))
   })
+  
   output$biais_txt_4 <- renderText({
     req(input$biais_4)
     results <- results_store()
@@ -337,6 +278,8 @@ server <- function(input, output, session) {
       "Biais sigma = ", round(biais_sigma, 6)
     )
   })
+  
+  
   output$biais_txt_1 <- renderText({
     req(input$biais_1)
     results <- results_store()
@@ -367,34 +310,8 @@ server <- function(input, output, session) {
       "Biais sigma = ", round(biais_sigma, 6)
     )
   })
-  output$plot1_hist <- renderPlot({
-    req(input$run_weiner_défaillance)
-    mu = isolate(input$moyenne_3)
-    sigma = isolate(sqrt(input$variance_3))
-    traj_nbr = isolate(input$traj_nbr_3)
-    L = isolate(input$pt_nbr_3)
-    N = 1000
-    T = isolate(input$T_3)
-    h = isolate(input$seuil_3)
-    results = replicate(traj_nbr, simulateWiener(N, L, mu, sigma, T))
-    t <- seq(0, T, length.out = L)
-    liste_t <- apply(results,2,function(x){
-      t[which(x>=h)[1]]
-    })
-    liste_t <- liste_t[!is.na(liste_t)]
-    hist(liste_t, prob = TRUE, breaks = 30,
-         main = "Sans maintenance", xlab = "Temps de traversée")
-    xx <- seq(min(liste_t), max(liste_t), length.out = 2000)
-    
-    lines(xx, dinvgauss(xx, mean = h/mu, shape = h^2/(sigma^2)),
-          col = "red", lwd = 2)
-  })
-  
-  # ============================================================
   # PAGE 2 : Processus Gamma
-  # ============================================================
   
-  # Simule un processus Gamma (increments indépendants Gamma)
   simulateGamma = function(nbr_pts, forme, taux, T) {
     x = numeric(nbr_pts)
     x[1] = 0
@@ -414,9 +331,8 @@ server <- function(input, output, session) {
     forme = isolate(input$forme_4)
     taux = isolate(input$taux_4)
     T = isolate(input$T_4)
-    
     t = seq(0,T,length.out = nbr_pts)
-    # Affichage
+    
     if (traj_nbr == 1){
       plot(t,simulateGamma(nbr_pts, forme, taux, T),type='l',xlab = "temps",ylab = "Dégradation Gamma",
            main = "SImulation d'une dégradation par le processus Gamma")
@@ -428,8 +344,6 @@ server <- function(input, output, session) {
       grid(col = "lightgray", lty = "dotted")
       for (i in 2:ncol(results)) lines(t, results[, i])
     }
-    
-    # Ligne horizontale = moyenne du processus (théorique)
     abline(0, forme/taux, col='red')
   })
   results_store_2 = reactiveVal(NULL)
@@ -444,7 +358,9 @@ server <- function(input, output, session) {
     results_store_2(results)
     nbr_pts <- L
     t <- seq(0, T, length.out = L)
+    
     #max vraisemblance
+    
     iind <- seq(1, 4000, length.out = 50000)
     s_vect <- as.vector(apply(results, 2, diff))
     log_svect <- log(s_vect)[!is.infinite(log(s_vect))]
@@ -458,7 +374,9 @@ server <- function(input, output, session) {
     idx <- which(fct[-1]* fct[-length(fct)] < 0)
     b_est <- ind[idx[1]]
     a_est <- (b_est * sum(s_vect)) / (traj_nbr * T)
+    
     #méthode des moments
+    
     dt <- diff(t); dt <- dt[1]
     dX_all <- as.vector(apply(results, 2, diff))
     b_global <- mean(dX_all) / var(dX_all)
@@ -476,6 +394,7 @@ server <- function(input, output, session) {
       )
     )
   })
+  
     output$biais_txt_2 <- renderText({
       req(input$biais_2)
       results <- results_store_2()
@@ -492,7 +411,6 @@ server <- function(input, output, session) {
         m_1 = mean(delta_X/sqrt(delta_t))
         v = var(delta_X)
         m_2 = mean(delta_X)
-        # Formules méthode des moments
         a[i] = (m_1^2)/v 
         b[i] = m_2/v
       }
@@ -545,60 +463,10 @@ server <- function(input, output, session) {
         "Biais taux = ", round(biais_b, 6)
       )
     })
-    temps_défaillance = reactiveVal(NULL)
-  output$plot2_hist <- renderPlot({
-    req(input$run_gamma_défaillance)
-    forme = isolate(input$forme_6)
-    taux = isolate(input$taux_6)
-    traj_nbr = isolate(input$traj_nbr_6)
-    L = isolate(input$pt_nbr_6)
-    T = isolate(input$T_6)
-    h = isolate(input$seuil_6)
-    results = replicate(traj_nbr, simulateGamma(L, forme, taux,T))
-    t <- seq(0, T, length.out = L)
-    liste_t <- apply(results,2,function(x){
-      t[which(x>=h)[1]]
-    })
-    liste_t <- liste_t[!is.na(liste_t)]
-    temps_défaillance(liste_t)
-    if(input$Modele_rep == "histogramme de date de défaillance"){
-    hist(liste_t, prob = FALSE, breaks = 30,
-         main = "Sans maintenance", xlab = "Temps de traversée")
-    }else{
-      S <- ecdf(liste_t)
-      t_grid <- seq(0, max(liste_t), length.out = 2000)
-      plot(t_grid, 1 - S(t_grid),
-           type = "s",
-           main = "Fonction de survie empirique",
-           xlab = "Temps",
-           ylab = "S(t) = P(T > t)")
-      grid(col = "lightgray", lty = "dotted")
-    }
-    output$median_text <-renderText({
-      req(input$median)
-      t_deff <- temps_défaillance()
-      req(t_deff)
-      round(mean(t_deff),3)
-    })
-    output$maint_txt <- renderText({
-      req(input$maint_eff)
-      t_deff <- temps_défaillance()
-      req(t_deff)
-      paste0("date de maintenance effective à risque ", input$maint_eff," : ",round(quantile(t_deff,input$maint_eff),5))
-    })
-    output$prob_text <- renderText({
-      req(input$prob_surv)
-      t_deff <- temps_défaillance()
-      req(t_deff)
-      round(mean(t_deff >=input$prob_surv),4)
-    })
     
-  })
-  # ============================================================
+ 
   # PAGE 3 : Lecture CSV et estimation Gamma par moments
-  # ============================================================
   
-  # Lecture du fichier en réactif
   data <- reactive({
     req(input$file)
     df <- read.csv2(input$file$datapath)
@@ -615,6 +483,7 @@ server <- function(input, output, session) {
       FILE("SEMI_CONDUCTEUR")
     }
   })
+  
   #Weiner -> Moments -> plusieurs trajectoires
   paramweinerMomentsplusieurstraj <- reactive({
     df <- data()
@@ -630,33 +499,22 @@ server <- function(input, output, session) {
     })
     mu_global <- mean(s/sum_delta_t)
     sigma_global <- sqrt(var(s)/sum(delta_t))
-    #dt <- diff(log_t); dt <- dt[1]
-    #dX_all <- as.vector(apply(Y, 2, diff))
-    
-    #mu_global <- mean(dX_all/sum(dt))
-    #sigma_global <- sqrt(var(dX_all)/sum(dt))
     return (list(mu = mu_global, sigma = sigma_global))
   })
+  
   #   Gamma -> Moments -> 1 trajectoire
   paramsGammaMoments <- reactive({
     df <- data()
     t = df[[1]]
-    
     a = numeric(ncol(df) - 1)
     b = numeric(ncol(df) - 1)
-    
-    # On calcule pour chaque colonne une estimation (a,b)
     for (i in 1:length(a)) {
       X = df[[i + 1]]
-      
-      # Incréments du processus
       delta_X = diff(X)
       delta_t = diff(t)
-      
       m_1 = mean(delta_X/sqrt(delta_t))
       v = var(delta_X)
       m_2 = mean(delta_X)
-      # Formules méthode des moments
       a[i] = (m_1^2)/v 
       b[i] = m_2/v
     }
@@ -776,6 +634,8 @@ server <- function(input, output, session) {
     }
     return(list(a = a_ech, b = b_ech))
   })
+  
+  
   #Gamma -> Max vrai -> plusieurs trajectoires
   paramsGammaMVplusieurstraj <- reactive({
     df <- data()
@@ -801,6 +661,8 @@ server <- function(input, output, session) {
     res <- c(a_est,b_est)
     return(res)
   })
+  
+  
   #Gamma -> moments -> plusieurs traj (pooled)
   paramsGammaMomentsPlusieurstraj <- reactive({
     df <- data()
@@ -813,7 +675,9 @@ server <- function(input, output, session) {
     a_global <- mean(dX_all)^2 / (var(dX_all) * dt)
     return(list(a = a_global,b= b_global))
   })
-  # ---- Plot CSV + simulations ----
+  
+#Plot CSV + simulations 
+  
   hey_reactive <- reactiveVal(NULL)
   hey_reactive_2 <- reactiveVal(NULL)
   reactive_muest <- reactiveVal(NULL)
@@ -846,7 +710,6 @@ server <- function(input, output, session) {
           reactive_sigmaest(sigma)
           sim_mat <- sapply(1:length(mu), function(i) {
             rnorm(length(t_ext),mean = mu[i]*delta_t, sd = sigma[i]*sqrt(delta_t))
-            #simulateWiener(1000, length(t_ext), mu[i], sigma[i], t[length(t)])
           })
           sim_maty= sapply(1:ncol(sim_mat), function(j){
             cumsum(sim_mat[,j])
@@ -876,7 +739,7 @@ server <- function(input, output, session) {
             round(t_full[which(sim_maty[,i]>= seuil)[1]],3)
           })
           liste_ord_def <-sapply(1:length(mu),function(i){
-            round(sim_maty[which(sim_maty[,i]>= seuil)[1]],3)
+            sim_maty[which(sim_maty[,i]>= seuil)[1]]
           })
           hey_reactive(listie_bestie)
           reactive_valeurs_deg(liste_ord_def)
@@ -888,7 +751,6 @@ server <- function(input, output, session) {
           sapply(1:length(listie_bestie),function(i){
             abline(v = listie_bestie[i],col = "blue",lwd = 1,lty = 2)
             points(listie_bestie[i], liste_ord_def[i],col = "purple")
-            abline(h = liste_ord_def[i],col = "forestgreen",lwd = 1,lty = 2)
           })
           axis(
             side = 1,
@@ -897,8 +759,6 @@ server <- function(input, output, session) {
             las = 2,      
             cex.axis = 1
           )
-          axis(side = 2,at = liste_ord_def,labels =  round(liste_ord_def,2),
-               las = 2, cex.axis = 1)
         } else{#plusieurs trajectoires
           t_ext <- t
           delta_t <- diff(t_ext)
@@ -1018,7 +878,7 @@ server <- function(input, output, session) {
               t_full[idx]
             })
             liste_ord_def <-sapply(1:n_traj,function(i){
-              round(sim_maty[which(sim_maty[,i]>= seuil)[1]],3)
+              sim_maty[which(sim_maty[,i]>= seuil)[1]]
             })
             hey_reactive(listie_bestie)
             matplot(t_full,sim_maty,type= "b",pch = 16,lty = 1,main ="Trajectoires simulées le processus Gamma en utilisant la méthode de maximum de vraisemblance",
@@ -1030,7 +890,6 @@ server <- function(input, output, session) {
             sapply(1:length(listie_bestie),function(i){
               abline(v = listie_bestie[i],col = "blue",lwd = 1,lty = 2)
               points(listie_bestie[i], liste_ord_def[i], pch = 19,col = "purple")
-              abline(h = liste_ord_def[i],col = "forestgreen",lwd = 1,lty = 2)
             })
             axis(
               side = 1,
@@ -1039,8 +898,6 @@ server <- function(input, output, session) {
               las = 2,      
               cex.axis = 1.3
             )
-            axis(side = 2,at = liste_ord_def,labels =  round(liste_ord_def,2),
-                 las = 2, cex.axis = 1)
           }
         }else{#moments
           if (input$one_or_more_moments == "1 seul trajectoire"){
@@ -1126,4 +983,5 @@ server <- function(input, output, session) {
     )
   })
 }
+
 shinyApp(ui, server)
