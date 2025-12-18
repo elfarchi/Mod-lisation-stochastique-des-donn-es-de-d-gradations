@@ -30,7 +30,7 @@ failure_time = numeric(nb_trajectoires)
 for (i in (1:nb_trajectoires)){
   dx = rgamma(n = length(dt),shape = a * dt,scale = b)
   x = c(0,cumsum(dx))
-  failure_time[i]= t[x>w][1]
+  failure_time[i]= t[x>L][1]
 }
 hist(failure_time,probability = TRUE)
 ```
