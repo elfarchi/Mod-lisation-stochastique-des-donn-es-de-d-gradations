@@ -15,10 +15,10 @@ ui <- page_navbar(
         "Trajectoires",
         page_sidebar(
           sidebar = sidebar(
-            numericInput("pt_nbr_1", "Nombre points :", 100),
-            numericInput("moyenne_1", "Drift :", 10),
+            numericInput("pt_nbr_1", "Nombre points :", 1000),
+            numericInput("moyenne_1", "Drift :", 8),
             numericInput("variance_1", "Variabilité :", 10),
-            numericInput("traj_nbr_1", "Nb trajectoires :", 7),
+            numericInput("traj_nbr_1", "Nb trajectoires :", 1),
             numericInput("T_1","Durée",10),
             actionButton("run_weiner_sim","Exécuter" , class = "btn-primary")
           ),
@@ -35,10 +35,10 @@ ui <- page_navbar(
         sidebarLayout(
           sidebarPanel(
             numericInput("pt_nbr_2", "Nombre points :", 1000),
-            numericInput("moyenne_2", "Drift :", 10),
-            numericInput("variance_2", "Variabilité :", 15),
-            numericInput("traj_nbr_2", "Nb trajectoires :", 500),
-            numericInput("T_2","Durée",100),
+            numericInput("moyenne_2", "Drift :", 0.484),
+            numericInput("variance_2", "Variabilité :", 0.2905*2),
+            numericInput("traj_nbr_2", "Nb trajectoires :", 100),
+            numericInput("T_2","Durée",15),
             checkboxInput("biais_1","Biais des estimateurs par méthode des moments "),
             verbatimTextOutput("biais_txt_1"),
             checkboxInput("biais_4","Biais des estimateurs par méthode des MV"),
@@ -50,25 +50,7 @@ ui <- page_navbar(
           )
         )
       ),
-      
-      #TAB 3 : Distribution
-      tabPanel(
-        "Etude des dates de défaillances",
-        sidebarLayout(
-          sidebarPanel(
-            numericInput("pt_nbr_3", "Nombre points :", 100),
-            numericInput("moyenne_3", "Drift:", 8),
-            numericInput("variance_3", "Variabilité :", 25),
-            numericInput("traj_nbr_3", "Nb trajectoires :", 1000),
-            numericInput("T_3","Durée",500),
-            numericInput("seuil_3", "Seuil :", 80),
-            actionButton("run_weiner_défaillance","Exécuter",class = "btn-primary")
-          ),
-          mainPanel(
-            plotOutput("plot1_hist",height = "800px")
-          )
-        )
-      )
+
     )
   ),
   
@@ -83,10 +65,10 @@ ui <- page_navbar(
         "Trajectoires",
         page_sidebar(
           sidebar = sidebar(
-            numericInput("pt_nbr_4", "Nombre points :", 100),
-            numericInput("forme_4", "Forme :", 10),
+            numericInput("pt_nbr_4", "Nombre points :", 1000),
+            numericInput("forme_4", "Forme :", 8),
             numericInput("taux_4", "Taux :", 10),
-            numericInput("traj_nbr_4", "Nb trajectoires :", 7),
+            numericInput("traj_nbr_4", "Nb trajectoires :", 1),
             numericInput("T_4","Durée",10),
             actionButton("run_sim_gamma","Exécuter",class = "btn-primary")
           ),
@@ -118,34 +100,7 @@ ui <- page_navbar(
           )
         )
       ),
-      
-      # TAB 3 : Distribution
-      tabPanel(
-        "Etude des dates de défaillances",
-        sidebarLayout(
-          sidebarPanel(
-            selectInput(inputId = "Modele_rep",
-                        label = "Modèle de représentation choisi",
-                        choices = c("histogramme de date de défaillance","fonction de survie")),
-            numericInput("pt_nbr_6", "Nombre points :", 100),
-            numericInput("forme_6", "Forme :", 10),
-            numericInput("taux_6", "Taux :", 8),
-            numericInput("traj_nbr_6", "Nb trajectoires :", 700),
-            numericInput("T_6","Durée",90),
-            numericInput("seuil_6", "Seuil :", 70),
-            checkboxInput("median","moyenne des temps de défaillance"),
-            verbatimTextOutput("median_text"),
-            actionButton("run_gamma_défaillance","Exécuter",class = "btn-primary"),
-            numericInput("maint_eff","date de maintenance effective", 0.95),
-            verbatimTextOutput("maint_txt"),
-            numericInput("prob_surv","probabilité de survie",30),
-            verbatimTextOutput("prob_text")
-          ),
-          mainPanel(
-            plotOutput("plot2_hist",height = "800px")
-          )
-        )
-      )
+  
     )
   ),
   
@@ -172,8 +127,6 @@ ui <- page_navbar(
           verbatimTextOutput("list_ttxt_2"),
           checkboxInput("list_t_1","afficher liste du temps de défaillance pour les semi-conducteurs"),
           verbatimTextOutput("list_ttxt_1"),
-          numericInput("survie_prob","Probabilité de survie",10),
-          verbatimTextOutput("survie_txt"),
         ),
         conditionalPanel(
           condition = "input.choix_du_modele == 'moments'",
@@ -357,31 +310,6 @@ server <- function(input, output, session) {
       "Biais sigma = ", round(biais_sigma, 6)
     )
   })
-  
-  
-  output$plot1_hist <- renderPlot({
-    req(input$run_weiner_défaillance)
-    mu = isolate(input$moyenne_3)
-    sigma = isolate(sqrt(input$variance_3))
-    traj_nbr = isolate(input$traj_nbr_3)
-    L = isolate(input$pt_nbr_3)
-    N = 1000
-    T = isolate(input$T_3)
-    h = isolate(input$seuil_3)
-    results = replicate(traj_nbr, simulateWiener(N, L, mu, sigma, T))
-    t <- seq(0, T, length.out = L)
-    liste_t <- apply(results,2,function(x){
-      t[which(x>=h)[1]]
-    })
-    liste_t <- liste_t[!is.na(liste_t)]
-    hist(liste_t, prob = TRUE, breaks = 30,
-         main = "Sans maintenance", xlab = "Temps de traversée")
-    xx <- seq(min(liste_t), max(liste_t), length.out = 2000)
-    
-    lines(xx, dinvgauss(xx, mean = h/mu, shape = h^2/(sigma^2)),
-          col = "red", lwd = 2)
-  })
-  
   # PAGE 2 : Processus Gamma
   
   simulateGamma = function(nbr_pts, forme, taux, T) {
@@ -536,56 +464,7 @@ server <- function(input, output, session) {
       )
     })
     
-    
-    temps_défaillance = reactiveVal(NULL)
-    output$plot2_hist <- renderPlot({
-    req(input$run_gamma_défaillance)
-    forme = isolate(input$forme_6)
-    taux = isolate(input$taux_6)
-    traj_nbr = isolate(input$traj_nbr_6)
-    L = isolate(input$pt_nbr_6)
-    T = isolate(input$T_6)
-    h = isolate(input$seuil_6)
-    results = replicate(traj_nbr, simulateGamma(L, forme, taux,T))
-    t <- seq(0, T, length.out = L)
-    liste_t <- apply(results,2,function(x){
-      t[which(x>=h)[1]]
-    })
-    liste_t <- liste_t[!is.na(liste_t)]
-    temps_défaillance(liste_t)
-    if(input$Modele_rep == "histogramme de date de défaillance"){
-    hist(liste_t, prob = FALSE, breaks = 30,
-         main = "Sans maintenance", xlab = "Temps de traversée")
-    }else{
-      S <- ecdf(liste_t)
-      t_grid <- seq(0, max(liste_t), length.out = 2000)
-      plot(t_grid, 1 - S(t_grid),
-           type = "s",
-           main = "Fonction de survie empirique",
-           xlab = "Temps",
-           ylab = "S(t) = P(T > t)")
-      grid(col = "lightgray", lty = "dotted")
-    }
-    output$median_text <-renderText({
-      req(input$median)
-      t_deff <- temps_défaillance()
-      req(t_deff)
-      round(mean(t_deff),3)
-    })
-    output$maint_txt <- renderText({
-      req(input$maint_eff)
-      t_deff <- temps_défaillance()
-      req(t_deff)
-      paste0("date de maintenance effective à risque ", input$maint_eff," : ",round(quantile(t_deff,input$maint_eff),5))
-    })
-    output$prob_text <- renderText({
-      req(input$prob_surv)
-      t_deff <- temps_défaillance()
-      req(t_deff)
-      round(mean(t_deff >=input$prob_surv),4)
-    })
-    
-  })
+ 
   # PAGE 3 : Lecture CSV et estimation Gamma par moments
   
   data <- reactive({
@@ -860,7 +739,7 @@ server <- function(input, output, session) {
             round(t_full[which(sim_maty[,i]>= seuil)[1]],3)
           })
           liste_ord_def <-sapply(1:length(mu),function(i){
-            round(sim_maty[which(sim_maty[,i]>= seuil)[1]],3)
+            sim_maty[which(sim_maty[,i]>= seuil)[1]]
           })
           hey_reactive(listie_bestie)
           reactive_valeurs_deg(liste_ord_def)
@@ -872,7 +751,6 @@ server <- function(input, output, session) {
           sapply(1:length(listie_bestie),function(i){
             abline(v = listie_bestie[i],col = "blue",lwd = 1,lty = 2)
             points(listie_bestie[i], liste_ord_def[i],col = "purple")
-            abline(h = liste_ord_def[i],col = "forestgreen",lwd = 1,lty = 2)
           })
           axis(
             side = 1,
@@ -881,8 +759,6 @@ server <- function(input, output, session) {
             las = 2,      
             cex.axis = 1
           )
-          axis(side = 2,at = liste_ord_def,labels =  round(liste_ord_def,2),
-               las = 2, cex.axis = 1)
         } else{#plusieurs trajectoires
           t_ext <- t
           delta_t <- diff(t_ext)
@@ -1002,7 +878,7 @@ server <- function(input, output, session) {
               t_full[idx]
             })
             liste_ord_def <-sapply(1:n_traj,function(i){
-              round(sim_maty[which(sim_maty[,i]>= seuil)[1]],3)
+              sim_maty[which(sim_maty[,i]>= seuil)[1]]
             })
             hey_reactive(listie_bestie)
             matplot(t_full,sim_maty,type= "b",pch = 16,lty = 1,main ="Trajectoires simulées le processus Gamma en utilisant la méthode de maximum de vraisemblance",
@@ -1014,7 +890,6 @@ server <- function(input, output, session) {
             sapply(1:length(listie_bestie),function(i){
               abline(v = listie_bestie[i],col = "blue",lwd = 1,lty = 2)
               points(listie_bestie[i], liste_ord_def[i], pch = 19,col = "purple")
-              abline(h = liste_ord_def[i],col = "forestgreen",lwd = 1,lty = 2)
             })
             axis(
               side = 1,
@@ -1023,8 +898,6 @@ server <- function(input, output, session) {
               las = 2,      
               cex.axis = 1.3
             )
-            axis(side = 2,at = liste_ord_def,labels =  round(liste_ord_def,2),
-                 las = 2, cex.axis = 1)
           }
         }else{#moments
           if (input$one_or_more_moments == "1 seul trajectoire"){
