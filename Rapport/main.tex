@@ -1,6 +1,6 @@
 \documentclass[a4paper,11pt]{article}
 
-% Packages essentiels
+
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[french]{babel}
@@ -27,10 +27,9 @@
 \fancyfoot[L]{}
 \fancyfoot[R]{}
 \fancyfoot[C]{\makebox[\textwidth][c]{\thepage}}
-% Mise en page
+
 \geometry{hmargin=2cm,vmargin=2.5cm}
 
-% Informations du document
 \title{\textbf{Modélisation Aléatoire et Analyse Statistique de Données de Dégradation}}
 \author{BOUBEKRI Saad, EL FARCHI Ayoub, LACHKHAM Aymane, ZEROUALI Mohammed Amine}
 \date{\textit{Projet Mathématiques Appliquées, Ensimag 1A}}
@@ -46,14 +45,13 @@ Ce rapport étudie la modélisation stochastique de la dégradation à l’aide 
 
 \tableofcontents
 
-% -------------------------------------------------------------------
+
 \section{Introduction}
 
 La modélisation de la dégradation constitue un enjeu central en fiabilité industrielle pour la prévision des défaillances et l’aide à la décision en maintenance. Les processus stochastiques continus offrent un cadre adapté pour décrire l’évolution aléatoire de l’état de dégradation, notamment le processus de Wiener et le processus Gamma. Ce travail s’appuie d’abord sur des modèles homogènes, dont la simulation et l’estimation des paramètres sont réalisées à l’aide des méthodes des moments et du maximum de vraisemblance au sein d’une application R Shiny. L’étude est ensuite étendue à des modèles non homogènes, avant d’intégrer des politiques de maintenance imparfaite afin d’analyser l’impact des interventions sur l’évolution de la dégradation et les performances du système.
 
-% -------------------------------------------------------------------
 \section{Modélisation stochastique de la dégradation}
-% -------------------------------------------------------------------
+
 Cette section présente les modèles stochastiques continus utilisés pour décrire l’évolution de la dégradation des systèmes. Nous nous appuyons sur des modèles largement étudiés dans la littérature, dont les propriétés théoriques sont bien établies \cite{kahle2016degradation}.
 
 \subsection{Processus de Wiener}
@@ -97,7 +95,6 @@ Les accroissements du processus sont presque sûrement positifs, ce qui garantit
 
 Comme pour le processus de Wiener, la défaillance du système est définie comme le premier instant où le processus atteint un seuil critique $L>0$. Le temps de défaillance est alors entièrement déterminé par les propriétés du processus Gamma et peut être étudié analytiquement ou par simulation \cite{kahle2016degradation}.
 
-% -------------------------------------------------------------------
 \section{Application R Shiny}
 Afin de rendre opérationnels les modèles ci-dessus et les méthodes développées dans les parties qui suivent, une application interactive sous R Shiny a été conçue. Elle permet à l’utilisateur de simuler des
 trajectoires de dégradation selon les processus de Wiener et Gamma avec des valeurs choisies pour leurs paramètres. Elle lui permet aussi d’estimer ces paramètres à partir de données observées, et de prévoir la défaillance des systèmes.
@@ -109,9 +106,7 @@ l’interprétation des résultats.
 
 
 
-% -------------------------------------------------------------------
 \section{Inférence statistique}
-% -------------------------------------------------------------------
 Cette section présente les méthodes d’estimation des paramètres des processus de Wiener et Gamma à partir de données de dégradation observées.
 
 \subsection{Estimation à partir d’une seule trajectoire}
@@ -162,12 +157,6 @@ L’identification des moments conduit aux estimateurs :
 où $\overline{\Delta x}$ et $S^2$ désignent respectivement la moyenne et la variance empiriques des accroissements, et $\overline{\Delta t}$ la moyenne des pas de temps.
 
 
-
-
-
-
-
-
 \subsubsection{Méthode du maximum de vraisemblance}
 
 \paragraph{Processus de Wiener :}
@@ -187,8 +176,6 @@ En maximisant le logarithme de la vraisemblance, on obtient les estimateurs expl
     = \frac{1}{n}\sum_{i=1}^n
     \frac{(\Delta x_i-\hat{\mu}\Delta t_i)^2}{\Delta t_i}.
 \end{equation}
-
-
 
 
 \paragraph{Processus Gamma :}\label{chapitre}
@@ -211,12 +198,6 @@ suivant :
 \end{align}
 où $\psi(x)=\Gamma'(x)/\Gamma(x)$ désigne la fonction digamma.
 La résolution du système est effectuée numériquement.
-
-
-
-
-
-
 
 \subsection{Plusieurs trajectoires}
 
@@ -259,9 +240,6 @@ a &= \frac{\mathbb{E}(S_i)^2}{\mathbb{V}(S_i)T_i},
 b &= \frac{\mathbb{E}(S_i)}{\mathbb{V}(S_i)}.
 \end{align*}
 Les espérances et variances sont estimées empiriquement à partir des $\{S_i\}_{i=1}^m$.
-
-
-
 
 \subsubsection{Méthode du maximum de vraisemblance}
 
@@ -318,15 +296,15 @@ L’estimateur de $b$ est obtenu en résolvant numériquement l’équation suiv
 + \sum_{i=1}^m \sum_{j=1}^{n_i} \Delta t_{i,j}\ln(\Delta x_{i,j})
 - \sum_{i=1}^m \sum_{j=1}^{n_i}
 \Delta t_{i,j}\,
-\psi(a\Delta t_{i,j})
+\psi(\hat a\Delta t_{i,j})
 = 0,
 \]
 où $\psi(x)=\Gamma'(x)/\Gamma(x)$ désigne la fonction digamma.
 
+\subsection{Comparaison des estimateurs}
+L’application R Shiny permet de comparer les performances des estimateurs à partir de simulations de processus de dégradation. Sur un échantillon de 500 trajectoires simulées, les biais des estimateurs obtenus par la méthode des moments et par maximum de vraisemblance se révèlent très proches, aussi bien pour le processus de Wiener que pour le processus Gamma. Les biais sont évalués par une approche Monte Carlo, fondée sur la moyenne empirique des paramètres estimés sur l’ensemble des trajectoires simulées.
 
 
-
-% -------------------------------------------------------------------
 
 \section{Application à des données réelles}
 Les méthodes d’estimation développées ont été appliquées à deux jeux de données réels
@@ -367,9 +345,6 @@ les temps de défaillance.
 \label{fig:donnees_reels}
 \end{figure}
 
-
-
-% -------------------------------------------------------------------
 \section{Processus de Wiener et de Gamma non homogènes}
 
 \subsection{Wiener avec drift de la forme: $\mu(t)= at^b$}
@@ -429,7 +404,6 @@ transformation logarithmique :
 empirique des trajectoires simulées.
 \end{enumerate}
 
-
 \begin{table}[h!]
     \centering
     \begin{tabular}{cccc}
@@ -474,7 +448,6 @@ Dans cette section notre processus X(t) vérifie les 2 premières propriétés d
 où  $A(t) = at^c$ ;  t > 0 : la fonction de forme,   
     $a > 0, c > 0$,      
    et  $b$ est le paramètre de taux. \\
-    
 
 \subsubsection{Calcul de la fonction de vraisemblance}
 Pour estimer les paramètres, on procède cette fois par la méthode du maximum de vraissemblance.\\ 
@@ -486,22 +459,9 @@ f_{\Delta X_i}(x)
 \frac{b^{k_i}}{\Gamma(k_i)} x^{k_i-1} e^{-b x},
 \qquad x>0.
 \]
-où
-\[
-k_i = A(t_i) - A(t_{i-1}) = a\bigl(t_i^{c} - t_{i-1}^{c}\bigr).
-\]
-Par indépendance des accroissements, la fonction de vraisemblance
-associée à l'échantillon $(\Delta x_1,\ldots,\Delta x_n)$ est
-\[
-L(a,b,c)
-=
-\prod_{i=1}^{n}
-\frac{b^{k_i}}{\Gamma(k_i)}
-(\Delta x_i)^{k_i-1}
-\exp\!\left(-b\,\Delta x_i\right).
-\]
+où $k_i = A(t_i) - A(t_{i-1}) = a\bigl(t_i^{c} - t_{i-1}^{c}\bigr).$
 
-En prenant le logarithme, on obtient la log-vraisemblance :
+Par indépendance des accroissements, le log de la fonction de vraissemblance s'écrit :
 \[
 \ell(a,b,c)
 =
@@ -511,23 +471,15 @@ En prenant le logarithme, on obtient la log-vraisemblance :
 - b\,\Delta x_i
 - \ln\Gamma(k_i)
 + k_i\ln b
-\Bigr],
+\Bigr].
 \]
-
-Pour maximiser cette fonction on résoud l'équation
-\begin{equation}
-    \nabla \ell(a,b,c)=0.
-\end{equation}
-
-
-Un calcul similaire et plus détaillé peut être trouvé dans \cite{chatenet2021modeling}.
+\noindent
+Pour maximiser cette fonction on résoud le système : $\nabla \ell(a,b,c)=0,$ voir \cite{chatenet2021modeling} pour plus de détails.
 
 
 Ce système doit être résolu numériquement pour obtenir les estimateurs
 \(\hat a, \hat b, \hat c\).
-En particulier, on peut maximiser la
-log-vraisemblance en utilisant la fonction \texttt{minimize} du module
-\texttt{scipy.optimize} en Python.
+
 
 
 Pour des valeurs réelles des paramètres \(a=2\), \(b=3\) et \(c=2\), 
@@ -549,11 +501,9 @@ d’obtenir les estimations suivantes :
     \caption{Valeurs réelles et estimations des paramètres obtenues par la méthode de maximum de vraisemblance.}
     \label{tab:estimations}
 \end{table}
-La densité de probabilité du temps de défaillance n'admet pas d'expression simple et ne sera determinée que par simulation de plusieurs trajectoires.
+La densité de probabilité du temps de défaillance n'admet pas d'expression simple.
 
-% -------------------------------------------------------------------
 \section{Maintenance Imparfaite}
-% -------------------------------------------------------------------
 \subsection{Objectifs de la maintenance}
 L'objectif de la maintenance est de prolonger la durée de vie d'un système dégradant tout en minimisant le coût global d'exploitation. Une stratégie de maintenance trop fréquente entraîne des coûts excessifs, tandis qu'une maintenance insuffisante augmente le risque de défaillance, généralement associée à un coût élevé. Le problème étudié consiste donc à déterminer une politique de maintenance optimale permettant de trouver un compromis entre ces deux effets antagonistes, en minimisant le coût moyen par unité de temps.
 
@@ -605,17 +555,13 @@ De légères fluctuations du seuil optimal sont observées pour des valeurs éle
 
 \begin{figure}[h!]
 \centering
-\includegraphics[width=1\textwidth]{Recherche_Seuil_Optimal_Well_Made.pdf}
+\includegraphics[width=0.75\textwidth]{Recherche_Seuil_Optimal_Well_Made.pdf}
 \caption{Fonction de coût \textbf{$J(h)$} pour différentes configurations de paramètres.}
 \label{fig:Recherche_Seuil_Optimal}
 \end{figure}
 
 \section{Conclusion}
 Ce projet a permis d’étudier et de mettre en œuvre des modèles stochastiques de dégradation basés sur les processus de Wiener et Gamma, dans des cadres homogène et non homogène. Les méthodes d’estimation par moments et par maximum de vraisemblance ont été développées pour une ou plusieurs trajectoires, puis validées par simulation. L’application R Shiny réalisée constitue un outil interactif pour la simulation, l’estimation paramétrique et l’analyse de la défaillance. Enfin, l’introduction de politiques de maintenance imparfaite a permis d’analyser l’impact des interventions sur la dynamique de dégradation et d’illustrer le lien entre modélisation stochastique et aide à la décision en maintenance.
-
-
-
-% -------------------------------------------------------------------
 
 \bibliographystyle{plain}
 \bibliography{ref}
