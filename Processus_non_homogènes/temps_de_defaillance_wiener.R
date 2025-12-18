@@ -25,12 +25,12 @@ for (i in 1:number_of_paths){
 
 
 hist(time_to_failure,
-     breaks = 35,            
+     breaks = 35,
      col = "skyblue",
      border = "white",
      main = "Histogramme des temps de defaillance",
      xlab = "temps de defaillance",
-     probability = TRUE)    
+     probability = TRUE)
 
 
 
@@ -50,7 +50,7 @@ tgrid <- seq(min(time_to_failure), max(time_to_failure), length.out = 500)
 lines(tgrid, fM2(tgrid, a_true, b_true, w, sigma_B), col = "violet", lwd = 2)
 # Ajouter une légende
 legend("topright", 
-       legend = c("approximation de la densité théorique"), 
-       col = "violet", 
+       legend = c("approximation de la densité théorique"),
+       col = "violet",
        lwd = 2, 
        cex = 0.9)
