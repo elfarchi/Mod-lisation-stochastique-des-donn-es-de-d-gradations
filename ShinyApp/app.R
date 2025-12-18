@@ -16,8 +16,8 @@ ui <- page_navbar(
         page_sidebar(
           sidebar = sidebar(
             numericInput("pt_nbr_1", "Nombre points :", 100),
-            numericInput("moyenne_1", "Moyenne :", 10),
-            numericInput("variance_1", "Variance :", 10),
+            numericInput("moyenne_1", "Dérive :", 10),
+            numericInput("variance_1", "Volatilité :", 10),
             numericInput("traj_nbr_1", "Nb trajectoires :", 7),
             numericInput("T_1","Durée",10),
             actionButton("run_weiner_sim","Exécuter" , class = "btn-primary")
@@ -35,8 +35,8 @@ ui <- page_navbar(
         sidebarLayout(
           sidebarPanel(
             numericInput("pt_nbr_2", "Nombre points :", 1000),
-            numericInput("moyenne_2", "Moyenne :", 10),
-            numericInput("variance_2", "Variance :", 15),
+            numericInput("moyenne_2", "Dérive :", 10),
+            numericInput("variance_2", "Volatilité :", 15),
             numericInput("traj_nbr_2", "Nb trajectoires :", 500),
             numericInput("T_2","Durée",100),
             checkboxInput("biais_1","Biais des estimateurs par méthode des moments "),
@@ -57,8 +57,8 @@ ui <- page_navbar(
         sidebarLayout(
           sidebarPanel(
             numericInput("pt_nbr_3", "Nombre points :", 100),
-            numericInput("moyenne_3", "Moyenne :", 8),
-            numericInput("variance_3", "Variance :", 25),
+            numericInput("moyenne_3", "Dérive :", 8),
+            numericInput("variance_3", "Volatilité :", 25),
             numericInput("traj_nbr_3", "Nb trajectoires :", 1000),
             numericInput("T_3","Durée",500),
             numericInput("seuil_3", "Seuil :", 80),
