@@ -1,0 +1,625 @@
+\documentclass[a4paper,11pt]{article}
+
+% Packages essentiels
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{booktabs} 
+\usepackage{float}
+\usepackage{MnSymbol} 
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{0pt}
+\fancyhead[C]{%
+    \makebox[\textwidth][c]{Projet Mathématiques Appliquées, Ensimag 1A}\\
+    \makebox[\textwidth][c]{\rule{0.9\textwidth}{0.1pt} }
+}
+
+\fancyhead[L]{}
+\fancyhead[R]{}
+
+\fancyfoot[L]{}
+\fancyfoot[R]{}
+\fancyfoot[C]{\makebox[\textwidth][c]{\thepage}}
+% Mise en page
+\geometry{hmargin=2cm,vmargin=2.5cm}
+
+% Informations du document
+\title{\textbf{Modélisation Aléatoire et Analyse Statistique de Données de Dégradation}}
+\author{BOUBEKRI Saad, EL FARCHI Ayoub, LACHKHAM Aymane, ZEROUALI Mohammed Amine}
+\date{\textit{Projet Mathématiques Appliquées, Ensimag 1A}}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Ce rapport étudie la modélisation stochastique de la dégradation à l’aide des processus de Wiener linéaire et Gamma homogène. Les paramètres sont estimés par les méthodes des moments et du maximum de vraisemblance, puis utilisés pour simuler des trajectoires et analyser les temps de défaillance. Les modèles sont appliqués à des données réelles de lasers et de semi-conducteurs et intégrés dans une application interactive R Shiny. Des extensions vers des modèles non homogènes et la maintenance imparfaite sont également abordées.
+\end{abstract}
+
+
+\tableofcontents
+
+% -------------------------------------------------------------------
+\section{Introduction}
+
+La modélisation de la dégradation constitue un enjeu central en fiabilité industrielle pour la prévision des défaillances et l’aide à la décision en maintenance. Les processus stochastiques continus offrent un cadre adapté pour décrire l’évolution aléatoire de l’état de dégradation, notamment le processus de Wiener et le processus Gamma. Ce travail s’appuie d’abord sur des modèles homogènes, dont la simulation et l’estimation des paramètres sont réalisées à l’aide des méthodes des moments et du maximum de vraisemblance au sein d’une application R Shiny. L’étude est ensuite étendue à des modèles non homogènes, avant d’intégrer des politiques de maintenance imparfaite afin d’analyser l’impact des interventions sur l’évolution de la dégradation et les performances du système.
+
+% -------------------------------------------------------------------
+\section{Modélisation stochastique de la dégradation}
+% -------------------------------------------------------------------
+Cette section présente les modèles stochastiques continus utilisés pour décrire l’évolution de la dégradation des systèmes. Nous nous appuyons sur des modèles largement étudiés dans la littérature, dont les propriétés théoriques sont bien établies \cite{kahle2016degradation}.
+
+\subsection{Processus de Wiener}
+Le processus de Wiener avec dérive est couramment utilisé pour modéliser des phénomènes de dégradation soumis à une tendance moyenne et à des fluctuations aléatoires \cite{kahle2016degradation}. Soit $(X_t)_{t \geq 0}$ un processus stochastique défini par :
+\begin{equation}
+    X(t) = \mu t + \sigma B_t,
+    \label{eq:wiener}
+\end{equation}
+où $\mu$ est le paramètre de dérive, $\sigma$ le paramètre de volatilité, et $(B_t)_{t \geq 0}$ un mouvement brownien standard.
+
+Le processus de Wiener possède des accroissements indépendants et stationnaires, et pour tout $0 \leq s < t$ :
+\begin{equation}
+    X(t) - X(s) \sim \mathcal{N}\bigl(\mu (t-s), \sigma^2 (t-s)\bigr).
+\end{equation}
+Ces propriétés en font un modèle adapté à la description de dégradations progressives affectées par des incertitudes aléatoires.
+
+Dans un cadre de fiabilité, la défaillance du système est définie comme le premier instant où le processus atteint un seuil critique $L>0$. Le temps de défaillance
+\[
+T = \inf \{ t \geq 0 \; | \; X(t) \geq L \}
+\]
+suit alors une loi Inverse Gaussienne, dont la densité est donnée par \cite{kahle2016degradation} :
+\begin{equation}
+    f_T(t) = \frac{L}{\sqrt{2\pi \sigma^2 t^3}}
+    \exp\!\left(-\frac{(L - \mu t)^2}{2\sigma^2 t}\right), \quad t>0.
+\end{equation}
+Cette expression permet notamment de caractériser analytiquement la durée de vie du système sous l’hypothèse d’un modèle homogène.
+
+
+
+
+\subsection{Processus Gamma}
+Le processus Gamma est fréquemment utilisé pour modéliser des phénomènes de dégradation irréversible et monotone, notamment lorsque l’accumulation de dommage est strictement croissante \cite{kahle2016degradation}. Soit $(X_t)_{t \geq 0}$ un processus stochastique tel que $X_0 = 0$ presque sûrement.
+
+Le processus $(X_t)$ est dit Gamma s’il possède des accroissements indépendants et stationnaires, et si pour tout $0 \leq s < t$, l’accroissement $X(t)-X(s)$ suit une loi Gamma :
+\begin{equation}
+    X(t) - X(s) \sim \mathcal{G}\bigl(a (t-s),\, b\bigr),
+\end{equation}
+où $a>0$ est le paramètre de forme (shape) et $b>0$ le paramètre de taux (rate).
+
+Les accroissements du processus sont presque sûrement positifs, ce qui garantit le caractère monotone croissant de la trajectoire de dégradation. Cette propriété distingue le processus Gamma du processus de Wiener et le rend particulièrement adapté à la modélisation de mécanismes d’usure cumulative sans phénomène de récupération.
+
+Comme pour le processus de Wiener, la défaillance du système est définie comme le premier instant où le processus atteint un seuil critique $L>0$. Le temps de défaillance est alors entièrement déterminé par les propriétés du processus Gamma et peut être étudié analytiquement ou par simulation \cite{kahle2016degradation}.
+
+% -------------------------------------------------------------------
+\section{Application R Shiny}
+Afin de rendre opérationnels les modèles ci-dessus et les méthodes développées dans les parties qui suivent, une application interactive sous R Shiny a été conçue. Elle permet à l’utilisateur de simuler des
+trajectoires de dégradation selon les processus de Wiener et Gamma avec des valeurs choisies pour leurs paramètres. Elle lui permet aussi d’estimer ces paramètres à partir de données observées, et de prévoir la défaillance des systèmes.
+
+L’application prend en charge des données issues d’un ou de plusieurs systèmes et
+intègre les méthodes des moments et du maximum de vraisemblance. Elle constitue
+un outil pédagogique et pratique facilitant l’exploration des modèles et
+l’interprétation des résultats.
+
+
+
+% -------------------------------------------------------------------
+\section{Inférence statistique}
+% -------------------------------------------------------------------
+Cette section présente les méthodes d’estimation des paramètres des processus de Wiener et Gamma à partir de données de dégradation observées.
+
+\subsection{Estimation à partir d’une seule trajectoire}
+On considère une trajectoire de dégradation observée aux instants
+$0 = t_0 < t_1 < \dots < t_n$, avec $\Delta t_i = t_i - t_{i-1}$.
+Les niveaux observés sont notés $x_i = X(t_i)$, et les accroissements
+\[
+\Delta x_i = x_i - x_{i-1}, \qquad i = 1,\dots,n.
+\]
+Les accroissements $(\Delta X_i)_{1\le i\le n}$ sont indépendants et vérifient :
+\begin{itemize}
+    \item Processus de Wiener :
+    $\Delta X_i \sim \mathcal{N}(\mu \Delta t_i,\, \sigma^2 \Delta t_i)$,
+    \item Processus Gamma :
+    $\Delta X_i \sim \mathcal{G}(a \Delta t_i,\, b)$.
+\end{itemize}
+
+\subsubsection{Méthode des moments}
+
+\paragraph{Processus de Wiener :}
+Les moments théoriques des accroissements sont :
+\[
+\mathbb{E}[\Delta X_i] = \mu \Delta t_i,
+\qquad
+\mathbb{V}[\Delta X_i] = \sigma^2 \Delta t_i.
+\]
+En identifiant les moments empiriques, on obtient les estimateurs :
+\begin{equation}
+    \hat{\mu} = \frac{1}{n}\sum_{i=1}^n \frac{\Delta x_i}{\Delta t_i},
+    \qquad
+    \hat{\sigma}^2 = \frac{1}{n}\sum_{i=1}^n
+    \left(\frac{\Delta x_i - \hat{\mu}\Delta t_i}{\sqrt{\Delta t_i}}\right)^2.
+\end{equation}
+
+\paragraph{Processus Gamma :}
+Pour le processus Gamma, les moments théoriques sont :
+\[
+\mathbb{E}[\Delta X_i] = \frac{a \Delta t_i}{b},
+\qquad
+\mathbb{V}[\Delta X_i] = \frac{a \Delta t_i}{b^2}.
+\]
+L’identification des moments conduit aux estimateurs :
+\begin{equation}
+    \hat{b} = \frac{\overline{\Delta x}}{S^2},
+    \qquad
+    \hat{a} = \frac{\hat{b}^2 S^2}{\overline{\Delta t}},
+\end{equation}
+où $\overline{\Delta x}$ et $S^2$ désignent respectivement la moyenne et la variance empiriques des accroissements, et $\overline{\Delta t}$ la moyenne des pas de temps.
+
+
+
+
+
+
+
+
+\subsubsection{Méthode du maximum de vraisemblance}
+
+\paragraph{Processus de Wiener :}
+Les accroissements $(\Delta X_i)_{1\le i\le n}$ étant indépendants et gaussiens,
+la fonction de vraisemblance s’écrit :
+\[
+\mathcal{L}(\mu,\sigma^2)
+= \prod_{i=1}^n f_{\mathcal{N}(\mu\Delta t_i,\sigma^2\Delta t_i)}(\Delta x_i).
+\]
+En maximisant le logarithme de la vraisemblance, on obtient les estimateurs explicites :
+\begin{equation} \label{estimation_mu_sigma}
+    \hat{\mu}
+    = \frac{\sum_{i=1}^n \Delta x_i}{\sum_{i=1}^n \Delta t_i}
+,
+    \qquad
+    \hat{\sigma}^2
+    = \frac{1}{n}\sum_{i=1}^n
+    \frac{(\Delta x_i-\hat{\mu}\Delta t_i)^2}{\Delta t_i}.
+\end{equation}
+
+
+
+
+\paragraph{Processus Gamma :}\label{chapitre}
+Pour le processus Gamma, les accroissements sont indépendants et distribués selon
+$\mathcal{G}(a\Delta t_i,b)$.
+La fonction de vraisemblance associée est
+\[
+\mathcal{L}(a,b)
+= \prod_{i=1}^n f_{\mathcal{G}(a\Delta t_i,b)}(\Delta x_i).
+\]
+La maximisation du logarithme de la vraisemblance conduit au système non linéaire
+suivant :
+
+\begin{align} \label{max_vrai_formules}
+& \ln(\hat b)\sum_{i=1}^n \Delta t_i
++ \sum_{i=1}^n \Delta t_i \ln(\Delta x_i)
+- \sum_{i=1}^n \Delta t_i\,\psi(\hat a\Delta t_i) = 0,\\
+& \hat a = \hat b\,\frac{\sum_{i=1}^n \Delta x_i}{\sum_{i=1}^n \Delta t_i}
+,
+\end{align}
+où $\psi(x)=\Gamma'(x)/\Gamma(x)$ désigne la fonction digamma.
+La résolution du système est effectuée numériquement.
+
+
+
+
+
+
+
+\subsection{Plusieurs trajectoires}
+
+On considère $m$ systèmes indépendants, supposés suivre le même processus de dégradation.
+Le système $i$ est observé $n_i$ fois aux dates
+$t_{i,1},\dots,t_{i,n_i}$, avec $t_{i,0}=0$ et
+$\Delta t_{i,j}=t_{i,j}-t_{i,j-1}$.
+Les accroissements observés sont
+$\Delta X_{i,j}=X(t_{i,j})-X(t_{i,j-1})$. Les variables $\Delta X_{i,j}$ sont indépendantes pour tous $(i,j)$.
+
+\subsubsection{Méthode des moments}
+
+On définit, pour chaque système : $S_i=\sum_{j=1}^{n_i}\Delta X_{i,j}$, et $T_i=\sum_{j=1}^{n_i}\Delta t_{i,j}.$
+
+\paragraph{Processus de Wiener :}
+Dans ce cas : $S_i \sim \mathcal{N}(\mu T_i,\sigma^2 T_i)$ \\
+On en déduit :
+\begin{align*}
+\mu &= \mathbb{E}\!\left(\frac{S_i}{T_i}\right),
+&
+\sigma^2 &= \mathbb{V}\!\left(\frac{S_i}{\sqrt{T_i}}\right).
+\end{align*}
+Les estimateurs empiriques sont donc :
+\begin{align*}
+\hat{\mu}
+&= \frac{1}{m}\sum_{i=1}^m \frac{s_i}{T_i},
+&
+\hat{\sigma}^2
+&= \frac{1}{m}\sum_{i=1}^m
+\left(\frac{s_i}{\sqrt{T_i}}-\overline{Y}\right)^2,
+\end{align*}
+où $s_i$ est la réalisation de $S_i$ et $\overline{Y}$ la moyenne empirique de $\frac{S_i}{\sqrt{T_i}}$.
+
+\paragraph{Processus Gamma :}
+Dans ce cas : $S_i \sim \mathcal{G}(aT_i,b).$ \\
+Les moments donnent :
+\begin{align*}
+a &= \frac{\mathbb{E}(S_i)^2}{\mathbb{V}(S_i)T_i},
+&
+b &= \frac{\mathbb{E}(S_i)}{\mathbb{V}(S_i)}.
+\end{align*}
+Les espérances et variances sont estimées empiriquement à partir des $\{S_i\}_{i=1}^m$.
+
+
+
+
+\subsubsection{Méthode du maximum de vraisemblance}
+
+\paragraph{Processus de Wiener :}
+La vraisemblance associée à l’ensemble des observations est :
+\[
+\mathcal{L}(\mu,\sigma^2)
+= \prod_{i=1}^m\prod_{j=1}^{n_i}
+f_{\mathcal{N}(\mu\Delta t_{i,j},\sigma^2\Delta t_{i,j})}(\Delta x_{i,j}).
+\]
+La maximisation conduit aux estimateurs :
+\begin{align*}
+\hat{\mu}
+&= \frac{\sum_{i=1}^m\sum_{j=1}^{n_i}\Delta x_{i,j}}
+        {\sum_{i=1}^m\sum_{j=1}^{n_i}\Delta t_{i,j}},
+&
+\hat{\sigma}^2
+&= \frac{1}{\sum_{i=1}^m n_i}
+\sum_{i=1}^m\sum_{j=1}^{n_i}
+\frac{(\Delta x_{i,j}-\hat{\mu}\Delta t_{i,j})^2}{\Delta t_{i,j}}.
+\end{align*}
+
+
+\paragraph{Processus Gamma :}
+
+On suppose que les accroissements $\Delta X_{i,j}$ sont indépendants et suivent
+\[
+\Delta X_{i,j} \sim \mathcal{G}(a\,\Delta t_{i,j}, b),
+\]
+où $a>0$ est le paramètre de forme et $b>0$ le paramètre de taux.
+
+La fonction de log-vraisemblance associée s’écrit :
+\[
+\ell(a,b)
+= \sum_{i=1}^m \sum_{j=1}^{n_i}
+\Big[
+a\Delta t_{i,j}\ln(b)
+- \ln\Gamma(a\Delta t_{i,j})
++ (a\Delta t_{i,j}-1)\ln(\Delta x_{i,j})
+- b\,\Delta x_{i,j}
+\Big].
+\]
+
+La maximisation par rapport à $b$ conduit à l’estimateur explicite :
+\[
+\hat a = \hat b \,
+\frac{\sum_{i=1}^m \sum_{j=1}^{n_i} \Delta x_{i,j}}
+{\sum_{i=1}^m \sum_{j=1}^{n_i} \Delta t_{i,j}}.
+\]
+
+L’estimateur de $b$ est obtenu en résolvant numériquement l’équation suivante :
+\[
+\ln(\hat b)\sum_{i=1}^m \sum_{j=1}^{n_i} \Delta t_{i,j}
++ \sum_{i=1}^m \sum_{j=1}^{n_i} \Delta t_{i,j}\ln(\Delta x_{i,j})
+- \sum_{i=1}^m \sum_{j=1}^{n_i}
+\Delta t_{i,j}\,
+\psi(a\Delta t_{i,j})
+= 0,
+\]
+où $\psi(x)=\Gamma'(x)/\Gamma(x)$ désigne la fonction digamma.
+
+
+
+
+% -------------------------------------------------------------------
+
+\section{Application à des données réelles}
+Les méthodes d’estimation développées ont été appliquées à deux jeux de données réels
+de dégradation, portant sur $15$ lasers et $5$ semi-conducteurs.
+Pour chaque jeu de données, les paramètres des modèles ont été estimés par les méthodes
+des moments et du maximum de vraisemblance.
+
+En raison du nombre de systèmes observés et de l’extension des trajectoires simulées
+au-delà de la période d’observation afin de prévoir la défaillance, la superposition
+des données réelles et des trajectoires simulées sur un même graphique conduirait à
+une représentation peu lisible. Les figures présentées montrent donc uniquement les
+trajectoires simulées à partir des paramètres estimés.
+
+Les données de lasers présentant une évolution monotone croissante, elles ont été
+modélisées par un processus Gamma. À l’inverse, les données de semi-conducteurs
+montrant des fluctuations autour d’une tendance moyenne, elles ont été modélisées
+par un processus de Wiener.
+
+La figure~\ref{fig:donnees_reels} illustre les trajectoires simulées pour chacun des deux
+types de systèmes, permettant d’analyser la dynamique de dégradation et d’estimer
+les temps de défaillance.
+
+
+\begin{figure}[h!]
+\centering
+\begin{subfigure}{0.49\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Lasers.png}
+    \caption{Trajectoires simulées pour les lasers à partir d’un processus Gamma estimé}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.49\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{Semi-Conducteurs.png}
+    \caption{Trajectoires simulées pour les semi-conducteurs à partir d’un processus de Wiener estimé}
+\end{subfigure}
+\caption{Trajectoires de dégradation simulées à partir des paramètres estimés sur données réelles}
+\label{fig:donnees_reels}
+\end{figure}
+
+
+
+% -------------------------------------------------------------------
+\section{Processus de Wiener et de Gamma non homogènes}
+
+\subsection{Wiener avec drift de la forme: $\mu(t)= at^b$}
+
+On considère un processus stochastique $(X_t)_{t \geq 0}$ décrivant l’évolution
+de la dégradation d’un système. Le modèle de Wiener non linéaire est défini par :
+\begin{equation}
+X(t) = a\,t^b + \sigma B(t),
+\quad t \ge 0,
+\end{equation}
+où $\sigma > 0$ est le coefficient
+de diffusion, $a > 0$ et $b \ge 0$ sont des paramètres inconnus.
+
+Dans ce cas on a : 
+\begin{equation}
+\forall 0<s<t\,; X(t) -X(s) \rightlsquigarrow \mathcal{N}(a(t^b - s^b),\sigma^2(t-s)).
+\end{equation}
+
+\subsubsection{Estimation des parametres:}
+\textbf{Par maximum de vraissemblance} :
+le log de la fonction de vraissemblance s'écrit :
+\begin{equation}
+\ell(a,b,\sigma)
+=
+-\frac{n}{2}\log(2\pi)
+-\frac{1}{2}\sum_{i=1}^{n}\log\!\big(\sigma^2 (t_i-t_{i-1})\big)
+-\frac{1}{2\sigma^2}
+\sum_{i=1}^{n}
+\frac{
+\left[
+\Delta x_i
+-
+a\left(t_i^{\,b}-t_{i-1}^{\,b}\right)
+\right]^2
+}{
+t_i-t_{i-1}
+}
+\end{equation}
+on peut maximiser la log-vraisemblance en utilisant la fonction \texttt{minimize} du module \texttt{scipy.optimize} en Python (voir les résultats dans le tableau~\ref{tab:estimations_moments}).
+
+\textbf{Par la méthode des moments} : la procédure se déroule de la manière suivante :
+
+\begin{enumerate}
+\item Etant donné \(N\) trajectoires indépendantes
+\(\{X_i(t),\, i=1,\dots,N\}\) du processus.
+
+\item À chaque instant \(t_j\), on estime l’espérance de $X(t_j)$ par la moyenne empirique :
+\[
+\hat m(t_j)=\frac{1}{N}\sum_{i=1}^N x_i(t_j).
+\]
+
+\item Les paramètres \(a\) et \(b\) sont estimés par régression linéaire après
+transformation logarithmique :
+\[
+\log \hat m(t_j)=\log a + b\,\log t_j.
+\]
+
+\item Le paramètre \(\sigma\) est ensuite estimé à partir de la variance
+empirique des trajectoires simulées.
+\end{enumerate}
+
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{cccc}
+        \toprule
+        Paramètre & Valeur réelle & Moments & Max. Vraissemblance \\ 
+        \midrule
+        \(a\) & 2   & 2.015121 & 1.98695\\ 
+        \(b\) & 1.5 & 1.498815 & 1.5049\\ 
+        \(\sigma\)  & 60&57.8547&59.2374\\
+        \bottomrule
+    \end{tabular}
+    \caption{Résultats des estimations des paramètres.}
+    \label{tab:estimations_moments}
+\end{table}
+Enfin une approximation de la densité de probabilité du temps de défaillance est
+donnée  par \cite{huang2024analysis}  :
+\begin{equation}
+f_T(t) \approx
+\frac{L - a\,t^b(1-b)}{\sqrt{2\pi\,\sigma^2\,t^{3}}}
+\exp\!\left(
+-\frac{\left(L - a\,t^b\right)^2}{2\,\sigma^2\,t}
+\right),
+\quad t > 0.
+\end{equation}
+où $L > 0$ désigne le seuil de franchissement.
+
+
+Après la simulation de 1000 trajectoires suivant le modèle non lineaire précédent, la figure~\ref{fig:time_to_failure} nous donne la superposition de la courbe théorique avec l'histogramme des temps de défaillance.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.85\textwidth,height = 0.32\textheight]{histograrmme des temps de defaillancec.pdf}
+    \caption{Histogramme des temps de défaillance des trajectoires simulées et la densité théorique.}
+    \label{fig:time_to_failure}
+\end{figure}
+
+\subsection{Processus gamma non homogène}
+Dans cette section notre processus X(t) vérifie les 2 premières propriétés du processus gamma homogène tandis que la 3\up{ème} devient \cite{chatenet2021modeling}:
+\begin{equation}
+        \forall 0<s<t\,; X(t) -X(s) \rightlsquigarrow \mathcal{G}(A(t)-A(s),b);
+    \end{equation}
+où  $A(t) = at^c$ ;  t > 0 : la fonction de forme,   
+    $a > 0, c > 0$,      
+   et  $b$ est le paramètre de taux. \\
+    
+
+\subsubsection{Calcul de la fonction de vraisemblance}
+Pour estimer les paramètres, on procède cette fois par la méthode du maximum de vraissemblance.\\ 
+
+La densité de probabilité de $\Delta X_i$ est donnée par
+\[
+f_{\Delta X_i}(x)
+=
+\frac{b^{k_i}}{\Gamma(k_i)} x^{k_i-1} e^{-b x},
+\qquad x>0.
+\]
+où
+\[
+k_i = A(t_i) - A(t_{i-1}) = a\bigl(t_i^{c} - t_{i-1}^{c}\bigr).
+\]
+Par indépendance des accroissements, la fonction de vraisemblance
+associée à l'échantillon $(\Delta x_1,\ldots,\Delta x_n)$ est
+\[
+L(a,b,c)
+=
+\prod_{i=1}^{n}
+\frac{b^{k_i}}{\Gamma(k_i)}
+(\Delta x_i)^{k_i-1}
+\exp\!\left(-b\,\Delta x_i\right).
+\]
+
+En prenant le logarithme, on obtient la log-vraisemblance :
+\[
+\ell(a,b,c)
+=
+\sum_{i=1}^{n}
+\Bigl[
+(k_i-1)\ln(\Delta x_i)
+- b\,\Delta x_i
+- \ln\Gamma(k_i)
++ k_i\ln b
+\Bigr],
+\]
+
+Pour maximiser cette fonction on résoud l'équation
+\begin{equation}
+    \nabla \ell(a,b,c)=0.
+\end{equation}
+
+
+Un calcul similaire et plus détaillé peut être trouvé dans \cite{chatenet2021modeling}.
+
+
+Ce système doit être résolu numériquement pour obtenir les estimateurs
+\(\hat a, \hat b, \hat c\).
+En particulier, on peut maximiser la
+log-vraisemblance en utilisant la fonction \texttt{minimize} du module
+\texttt{scipy.optimize} en Python.
+
+
+Pour des valeurs réelles des paramètres \(a=2\), \(b=3\) et \(c=2\), 
+l’application de la méthode de maximum de vraisemblance numérique a permis 
+d’obtenir les estimations suivantes :
+
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{ccc}
+        \toprule
+        Paramètre & Valeur réelle & Estimation \\ 
+        \midrule
+        \(a\) & 2 & 2.0008 \\
+        \(b\) & 3 & 3.0205 \\
+        \(c\) & 2 & 1.9991 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Valeurs réelles et estimations des paramètres obtenues par la méthode de maximum de vraisemblance.}
+    \label{tab:estimations}
+\end{table}
+La densité de probabilité du temps de défaillance n'admet pas d'expression simple et ne sera determinée que par simulation de plusieurs trajectoires.
+
+% -------------------------------------------------------------------
+\section{Maintenance Imparfaite}
+% -------------------------------------------------------------------
+\subsection{Objectifs de la maintenance}
+L'objectif de la maintenance est de prolonger la durée de vie d'un système dégradant tout en minimisant le coût global d'exploitation. Une stratégie de maintenance trop fréquente entraîne des coûts excessifs, tandis qu'une maintenance insuffisante augmente le risque de défaillance, généralement associée à un coût élevé. Le problème étudié consiste donc à déterminer une politique de maintenance optimale permettant de trouver un compromis entre ces deux effets antagonistes, en minimisant le coût moyen par unité de temps.
+
+\subsection{Maintenance imparfaite par réduction de l'état}
+
+Soit $(X_t)_{t \geq 0}$ un processus de Wiener modélisant le niveau de dégradation d’un système.
+La défaillance survient lorsque le niveau de dégradation atteint un seuil critique $L$ ; on note
+$T_f$ le temps de défaillance.
+
+La maintenance est supposée imparfaite et s’effectue par réduction instantanée de l’état de dégradation.
+Lorsqu’une intervention est déclenchée au franchissement d’un seuil de sécurité $h < L$, le niveau de
+dégradation est modifié selon
+\[
+X(\tau^+) = \alpha X(\tau^-), \qquad 0 < \alpha < 1,
+\]
+où $\alpha$ représente l’efficacité de la maintenance.
+
+La politique considérée est une politique à seuil : aucune intervention n’est réalisée tant que
+$X(t) < h$ ; dès que $X(t)$ atteint le seuil $h$, une maintenance est effectuée.
+Le remplacement du système intervient uniquement à la défaillance, lorsque $X(t) \ge L$.
+La dernière maintenance est ainsi définie comme la dernière intervention précédant l’atteinte du seuil
+critique.
+
+En raison de la composante aléatoire du processus de Wiener, la maintenance à seuil n’empêche pas
+nécessairement la défaillance. Un franchissement direct du seuil critique $L$ peut survenir avant toute
+intervention, notamment lorsque les fluctuations aléatoires sont importantes.
+
+
+\subsection{Fonction de coût}
+
+La performance d'une politique de maintenance est évaluée à l'aide du coût moyen par unité de temps :
+\[
+J(h) = \frac{C_m \, \mathbb{E}[N_m(h)] + C_f}{\mathbb{E}[T_f(h)]},
+\]
+où $C_m$ est le coût associé à une opération de maintenance et $C_f$ le coût global de défaillance, incluant le remplacement du système et les pertes associées à l'arrêt. Les variables aléatoires $N_m(h)$ et $T_f(h)$ désignent respectivement le nombre de maintenances effectuées et la durée de vie du système avant défaillance. Le problème consiste alors à déterminer le seuil optimal : $h^* = \arg\min_h J(h).$
+
+
+\subsection{Méthode de simulation}
+Les espérances intervenant dans la fonction de coût n'admettant pas d'expression analytique simple, elles sont estimées par simulation Monte Carlo. Pour chaque valeur du seuil $h$, un grand nombre de cycles de vie indépendants est simulé jusqu'à la défaillance. Le nombre moyen de maintenances et la durée de vie moyenne sont alors estimés empiriquement, permettant de calculer une approximation de $J(h)$. Le seuil optimal est obtenu par recherche exhaustive sur une grille de valeurs de $h$.
+
+\subsection{Résultats numériques et interprétation}
+
+La figure~\ref{fig:Recherche_Seuil_Optimal} présente l’évolution du coût moyen $J(h)$ en fonction du seuil de maintenance $h$ pour différentes valeurs du rapport de coûts $C_f/C_m$. Les espérances intervenant dans la définition de $J(h)$ sont estimées par simulation Monte Carlo, avec $1000$ trajectoires pour chaque valeur de $h$ et un taux de complétion supérieur à $98\%$ dans tous les cas.
+
+Les résultats montrent l’existence d’un seuil optimal $h^*$ minimisant le coût moyen, confirmant la pertinence d’une politique de maintenance à seuil dans le cadre d’un processus de Wiener avec maintenance imparfaite par réduction de l’état. Lorsque le rapport $C_f/C_m$ augmente, le seuil optimal $h^*$ décroît globalement : la maintenance devient plus préventive afin de réduire le risque de défaillance coûteuse. À l’inverse, lorsque le coût de maintenance est dominant, l’intervention est retardée, conduisant à des valeurs plus élevées de $h^*$.
+
+De légères fluctuations du seuil optimal sont observées pour des valeurs élevées de $C_f/C_m$. Elles s’expliquent par la discrétisation du seuil $h$ et par la variance résiduelle de l’estimation Monte Carlo.
+
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=1\textwidth]{Recherche_Seuil_Optimal_Well_Made.pdf}
+\caption{Fonction de coût \textbf{$J(h)$} pour différentes configurations de paramètres.}
+\label{fig:Recherche_Seuil_Optimal}
+\end{figure}
+
+\section{Conclusion}
+Ce projet a permis d’étudier et de mettre en œuvre des modèles stochastiques de dégradation basés sur les processus de Wiener et Gamma, dans des cadres homogène et non homogène. Les méthodes d’estimation par moments et par maximum de vraisemblance ont été développées pour une ou plusieurs trajectoires, puis validées par simulation. L’application R Shiny réalisée constitue un outil interactif pour la simulation, l’estimation paramétrique et l’analyse de la défaillance. Enfin, l’introduction de politiques de maintenance imparfaite a permis d’analyser l’impact des interventions sur la dynamique de dégradation et d’illustrer le lien entre modélisation stochastique et aide à la décision en maintenance.
+
+
+
+% -------------------------------------------------------------------
+
+\bibliographystyle{plain}
+\bibliography{ref}
+
+\end{document}
