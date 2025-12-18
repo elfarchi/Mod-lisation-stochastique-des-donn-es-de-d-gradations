@@ -1,7 +1,7 @@
 ```{r}
-a_true     <- 2
-b_true     <- 1.5
-sigma_true <- 60
+a_vrai    <- 2
+b_vrai     <- 1.5
+sigma_vrai <- 60
 
 ```
 
@@ -17,14 +17,14 @@ t
 dt <- diff(t)
 
 # drift
-mu <- a_true * t^b_true
+mu <- a_vrai * t^b_vrai
 
 # simulation des trajectoires
 X <- matrix(0, nrow = N, ncol = nT)
 
 for (i in 1:N) {
   W <- c(0, cumsum(rnorm(nT - 1, sd = sqrt(dt))))
-  X[i, ] <- mu + sigma_true * W
+  X[i, ] <- mu + sigma_vrai * W
 }
 
 ```
@@ -60,4 +60,12 @@ start_vals <- list(
 start_vals
 
 
+##maintenat on peut estimer sigma:
+residuals <- X - matrix(m_hat, nrow = N, ncol = nT, byrow = TRUE)
+variance <- apply(residuals, 2, var)
+
+
+# estimation de sigma
+sigma_hat <- sqrt(mean(variance / t))
+sigma_hat 
 ```
