@@ -109,7 +109,7 @@ ui <- page_navbar(
     "Analyse des données",
     sidebarLayout(
       sidebarPanel(
-        fileInput("file", "Upload CSV File", accept = ".csv"),
+        fileInput("file", "Insérer le fichier CSV", accept = ".csv"),
         selectInput(
           inputId = "choix_du_modele",
           label = "Le choix du modèle d'estimation",
