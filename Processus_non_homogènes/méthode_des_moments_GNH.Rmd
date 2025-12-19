@@ -1,0 +1,42 @@
+---
+title: "méthode_des_moments_GNH"
+output: html_document
+---
+
+```{r}
+a    <- 2
+b     <- 3
+c <- 2
+```
+
+```{r}
+set.seed(123)
+N  <- 5000        # nombres de trajectoires
+T  <- 40
+nT <- 5000        # nombre de points dans le temps
+
+t  <- seq(0, T, length.out = nT)
+dt = c(0,t[2:length(t)]^c-t[1:length(t)-1]^c)
+X <- matrix(0, nrow = N, ncol = nT)
+
+for (i in 1:N) {
+  X[i, ] <- cumsum(rgamma(nT,shape = a*dt,rate  = b))
+}
+```
+
+```{r}
+mu_hat = colMeans(X)
+s_hat  = apply(X, 2, sd)
+linmod = lm(log(mu_hat[8:length(mu_hat)])~log(t[8:length(t)])) #on élimine les premières observations car elle peuvent etre nulles dans le log
+c_hat = linmod$coefficients[2]
+a_sur_b_hat = exp(linmod$coefficients[1])
+sa_sur_b_hat = mean(s_hat[-1]/sqrt(t[-1]^c_hat))
+a_hat = (a_sur_b_hat/sa_sur_b_hat)**2
+b_hat = sqrt(a_hat)/sa_sur_b_hat
+```
+
+```{r}
+cat("vraie valeur de a ",a,"\nvaleur éstimée de a",a_hat,"\n " )
+cat("vraie valeur de b ",b,"\nvaleur éstimée de b",b_hat,"\n " )
+cat("vraie valeur de c ",c,"\nvaleur éstimée de c",c_hat,"\n " )
+```
