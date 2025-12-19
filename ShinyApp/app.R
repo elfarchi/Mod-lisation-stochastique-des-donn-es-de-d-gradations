@@ -961,8 +961,8 @@ server <- function(input, output, session) {
     paste(
       paste0(
         "Trajectoire ",seq_along(mu),": ",
-        "paramètre de dirft  estimé = ", round(mu,4),"\t",
-        ",racine carrée du paramètre de variabilité = ",round(sigma,4)
+        "mu estimé = ", round(mu,4),"\t",
+        ", sigma estimé = ",round(sigma,4)
       ),
       collapse = "\n"
     )
@@ -976,8 +976,8 @@ server <- function(input, output, session) {
     paste(
       paste0(
         "Trajectoire ",seq_along(a),": ",
-        "paramètre de forme a estimé = ", round(a,4),"\t",
-        ", Paramètre de taux b  = ",round(b,4)
+        "a estimé = ", round(a,4),"\t",
+        ", b estimé = ",round(b,4)
       ),
       collapse = "\n"
     )
